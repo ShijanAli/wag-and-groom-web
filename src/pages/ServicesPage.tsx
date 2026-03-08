@@ -226,7 +226,7 @@ export default function ServicesPage() {
               Book your first appointment today and give your furry friend the care they deserve.
             </p>
             <div className="flex flex-wrap justify-center gap-4 mt-8">
-              <Button size="lg" variant="secondary" className="gap-2">
+              <Button size="lg" variant="secondary" className="gap-2" onClick={() => openBooking("")}>
                 <CalendarDays className="w-4 h-4" /> Book Appointment
               </Button>
               <Button size="lg" variant="outline" className="gap-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" asChild>
