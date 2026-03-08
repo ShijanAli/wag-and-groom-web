@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Scissors, Dog, Heart, Clock, Star, ArrowRight, Phone, Mail, MapPin, CalendarDays, Shield, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BookingModal } from "@/components/BookingModal";
 import heroPet from "@/assets/hero-pet.jpg";
 import gallery1 from "@/assets/pet-gallery-1.jpg";
 import gallery2 from "@/assets/pet-gallery-2.jpg";
