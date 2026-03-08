@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Scissors, Dog, Heart, Shield, Sparkles, Check, ArrowRight, Clock, Star, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { BookingModal } from "@/components/BookingModal";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -67,8 +69,12 @@ const packages = [
 ];
 
 export default function ServicesPage() {
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState("");
+  const openBooking = (svc: string) => { setSelectedService(svc); setBookingOpen(true); };
   return (
     <div className="min-h-screen bg-background">
+      <BookingModal open={bookingOpen} onOpenChange={setBookingOpen} preSelectedService={selectedService} />
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
@@ -84,7 +90,7 @@ export default function ServicesPage() {
           </div>
           <div className="flex items-center gap-3">
             <Link to="/admin"><Button variant="ghost" size="sm">Admin</Button></Link>
-            <Button size="sm">Book Now</Button>
+            <Button size="sm" onClick={() => openBooking("")}>Book Now</Button>
           </div>
         </div>
       </nav>
@@ -146,7 +152,7 @@ export default function ServicesPage() {
                   ))}
                 </div>
                 <div className="flex items-center gap-4 pt-2">
-                  <Button className="gap-2">
+                  <Button className="gap-2" onClick={() => openBooking(service.title)}>
                     <CalendarDays className="w-4 h-4" /> Book {service.title}
                   </Button>
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -194,7 +200,7 @@ export default function ServicesPage() {
                         </div>
                       ))}
                     </div>
-                    <Button className="w-full mt-6 gap-2" variant={pkg.popular ? "default" : "outline"}>
+                    <Button className="w-full mt-6 gap-2" variant={pkg.popular ? "default" : "outline"} onClick={() => openBooking(pkg.name)}>
                       Book {pkg.name} <ArrowRight className="w-4 h-4" />
                     </Button>
                   </CardContent>
@@ -219,7 +225,7 @@ export default function ServicesPage() {
               Book your first appointment today and give your furry friend the care they deserve.
             </p>
             <div className="flex flex-wrap justify-center gap-4 mt-8">
-              <Button size="lg" variant="secondary" className="gap-2">
+              <Button size="lg" variant="secondary" className="gap-2" onClick={() => openBooking("")}>
                 <CalendarDays className="w-4 h-4" /> Book Appointment
               </Button>
               <Button size="lg" variant="outline" className="gap-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" asChild>

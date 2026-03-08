@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Scissors, Dog, Heart, Clock, Star, ArrowRight, Phone, Mail, MapPin, CalendarDays, Shield, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BookingModal } from "@/components/BookingModal";
 import heroPet from "@/assets/hero-pet.jpg";
 import gallery1 from "@/assets/pet-gallery-1.jpg";
 import gallery2 from "@/assets/pet-gallery-2.jpg";
@@ -30,8 +32,11 @@ const testimonials = [
 ];
 
 const Index = () => {
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState("");
   return (
     <div className="min-h-screen bg-background">
+      <BookingModal open={bookingOpen} onOpenChange={setBookingOpen} preSelectedService={selectedService} />
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
@@ -42,16 +47,19 @@ const Index = () => {
             <span className="font-display text-xl font-bold text-foreground">HappyPaws</span>
           </Link>
           <div className="hidden md:flex items-center gap-8">
-            <a href="#services" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Services</a>
+           <a href="#services" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Services</a>
             <a href="#gallery" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Gallery</a>
             <a href="#testimonials" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Reviews</a>
             <a href="#contact" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Contact</a>
           </div>
           <div className="flex items-center gap-3">
+            <Link to="/dashboard">
+              <Button variant="ghost" size="sm">Dashboard</Button>
+            </Link>
             <Link to="/admin">
               <Button variant="ghost" size="sm">Admin</Button>
             </Link>
-            <Button size="sm">Book Now</Button>
+            <Button size="sm" onClick={() => { setSelectedService(""); setBookingOpen(true); }}>Book Now</Button>
           </div>
         </div>
       </nav>
@@ -76,7 +84,7 @@ const Index = () => {
               Give your furry friends the love and pampering they deserve. Expert grooming, walking, sitting, and spa services — all in one place.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Button size="lg" className="gap-2">
+              <Button size="lg" className="gap-2" onClick={() => { setSelectedService(""); setBookingOpen(true); }}>
                 <CalendarDays className="w-4 h-4" /> Book Appointment
               </Button>
               <Button size="lg" variant="outline" className="gap-2" asChild>
@@ -135,7 +143,7 @@ const Index = () => {
                 <p className="text-muted-foreground text-sm mt-2">{s.desc}</p>
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
                   <span className="text-xl font-bold text-primary">{s.price}</span>
-                  <Button variant="ghost" size="sm" className="gap-1 text-primary">Book <ArrowRight className="w-3 h-3" /></Button>
+                  <Button variant="ghost" size="sm" className="gap-1 text-primary" onClick={() => { setSelectedService(s.title); setBookingOpen(true); }}>Book <ArrowRight className="w-3 h-3" /></Button>
                 </div>
               </motion.div>
             ))}
