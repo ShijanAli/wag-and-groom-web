@@ -46,15 +46,19 @@ const Index = () => {
             </div>
             <span className="font-display text-xl font-bold text-foreground">HappyPaws</span>
           </Link>
-          <div className="hidden md:flex items-center gap-8">
-           <a href="#services" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Services</a>
+          <div className="hidden md:flex items-center gap-6">
+            <Link to="/" className="text-sm font-medium text-foreground hover:text-primary transition-colors">Home</Link>
+            <Link to="/services" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Services</Link>
             <a href="#gallery" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Gallery</a>
             <a href="#testimonials" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Reviews</a>
             <a href="#contact" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Contact</a>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Link to="/dashboard">
               <Button variant="ghost" size="sm">Dashboard</Button>
+            </Link>
+            <Link to="/staff">
+              <Button variant="ghost" size="sm">Staff</Button>
             </Link>
             <Link to="/admin">
               <Button variant="ghost" size="sm">Admin</Button>
