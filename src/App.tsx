@@ -17,6 +17,8 @@ import AdminStaff from "./pages/admin/AdminStaff";
 import AdminReviews from "./pages/admin/AdminReviews";
 import AdminGallery from "./pages/admin/AdminGallery";
 import AdminPromotions from "./pages/admin/AdminPromotions";
+import AdminProfile from "./pages/admin/AdminProfile";
+import AdminRoles from "./pages/admin/AdminRoles";
 import StaffDashboard from "./pages/staff/StaffDashboard";
 
 const queryClient = new QueryClient();
@@ -42,6 +44,8 @@ const App = () => (
               <Route path="reviews" element={<AdminReviews />} />
               <Route path="gallery" element={<AdminGallery />} />
               <Route path="promotions" element={<AdminPromotions />} />
+              <Route path="profile" element={<AdminProfile />} />
+              <Route path="roles" element={<AdminRoles />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
