@@ -144,7 +144,7 @@ const Index = () => {
                 <p className="text-muted-foreground text-sm mt-2">{s.desc}</p>
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
                   <span className="text-xl font-bold text-primary">{s.price}</span>
-                  <Button variant="ghost" size="sm" className="gap-1 text-primary">Book <ArrowRight className="w-3 h-3" /></Button>
+                  <Button variant="ghost" size="sm" className="gap-1 text-primary" onClick={() => { setSelectedService(s.title); setBookingOpen(true); }}>Book <ArrowRight className="w-3 h-3" /></Button>
                 </div>
               </motion.div>
             ))}
