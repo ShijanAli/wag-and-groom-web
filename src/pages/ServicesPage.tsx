@@ -91,7 +91,7 @@ export default function ServicesPage() {
           </div>
           <div className="flex items-center gap-3">
             <Link to="/admin"><Button variant="ghost" size="sm">Admin</Button></Link>
-            <Button size="sm">Book Now</Button>
+            <Button size="sm" onClick={() => openBooking("")}>Book Now</Button>
           </div>
         </div>
       </nav>
