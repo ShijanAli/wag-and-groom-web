@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Scissors, Dog, Heart, Shield, Sparkles, Check, ArrowRight, Clock, Star, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { BookingModal } from "@/components/BookingModal";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
