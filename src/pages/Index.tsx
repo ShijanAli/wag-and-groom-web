@@ -85,7 +85,7 @@ const Index = () => {
               Give your furry friends the love and pampering they deserve. Expert grooming, walking, sitting, and spa services — all in one place.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Button size="lg" className="gap-2">
+              <Button size="lg" className="gap-2" onClick={() => { setSelectedService(""); setBookingOpen(true); }}>
                 <CalendarDays className="w-4 h-4" /> Book Appointment
               </Button>
               <Button size="lg" variant="outline" className="gap-2" asChild>
