@@ -1,5 +1,6 @@
-import { Bell, Globe, Moon, Sun, User, Search } from "lucide-react";
+import { Bell, Globe, Moon, Sun, User, Search, Shield, Lock, LogOut } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +14,7 @@ import {
 
 export function AdminTopbar() {
   const [darkMode, setDarkMode] = useState(false);
+  const navigate = useNavigate();
 
   const toggleDark = () => {
     setDarkMode(!darkMode);
@@ -90,16 +92,22 @@ export function AdminTopbar() {
               </div>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
-              <p className="font-medium">Admin User</p>
+              <p className="font-medium">Ryan Cooper</p>
               <p className="text-xs text-muted-foreground">admin@happypaws.com</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile Settings</DropdownMenuItem>
-            <DropdownMenuItem>Billing</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/admin/profile")}>
+              <User className="w-4 h-4 mr-2" /> Profile Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/admin/roles")}>
+              <Shield className="w-4 h-4 mr-2" /> Roles & Permissions
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">Sign Out</DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive" onClick={() => navigate("/")}>
+              <LogOut className="w-4 h-4 mr-2" /> Sign Out
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

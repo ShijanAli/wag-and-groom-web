@@ -1,4 +1,4 @@
-import { Dog, LayoutDashboard, CalendarDays, Scissors, Users, UserCog, Star, Image, Tag, ChevronLeft } from "lucide-react";
+import { Dog, LayoutDashboard, CalendarDays, Scissors, Users, UserCog, Star, Image, Tag, ChevronLeft, Shield, User } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -28,11 +28,36 @@ const manageItems = [
   { title: "Promotions", url: "/admin/promotions", icon: Tag },
 ];
 
+const systemItems = [
+  { title: "Roles & Permissions", url: "/admin/roles", icon: Shield },
+  { title: "Profile", url: "/admin/profile", icon: User },
+];
+
 export function AdminSidebar() {
   const { state, toggleSidebar } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
   const isActive = (path: string) => location.pathname === path;
+
+  const renderGroup = (label: string, items: typeof mainItems) => (
+    <SidebarGroup>
+      <SidebarGroupLabel className="text-sidebar-foreground/50">{label}</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {items.map((item) => (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                <NavLink to={item.url} end className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                  <item.icon className="mr-2 h-4 w-4" />
+                  {!collapsed && <span>{item.title}</span>}
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -44,41 +69,9 @@ export function AdminSidebar() {
       </div>
 
       <SidebarContent className="pt-4">
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50">Main</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {mainItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <NavLink to={item.url} end className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50">Manage</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {manageItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <NavLink to={item.url} end className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {renderGroup("Main", mainItems)}
+        {renderGroup("Manage", manageItems)}
+        {renderGroup("System", systemItems)}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-2">
