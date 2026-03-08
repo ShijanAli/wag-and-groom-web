@@ -201,7 +201,7 @@ export default function ServicesPage() {
                         </div>
                       ))}
                     </div>
-                    <Button className="w-full mt-6 gap-2" variant={pkg.popular ? "default" : "outline"}>
+                    <Button className="w-full mt-6 gap-2" variant={pkg.popular ? "default" : "outline"} onClick={() => openBooking(pkg.name)}>
                       Book {pkg.name} <ArrowRight className="w-4 h-4" />
                     </Button>
                   </CardContent>
