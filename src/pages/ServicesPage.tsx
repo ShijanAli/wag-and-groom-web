@@ -153,7 +153,7 @@ export default function ServicesPage() {
                   ))}
                 </div>
                 <div className="flex items-center gap-4 pt-2">
-                  <Button className="gap-2">
+                  <Button className="gap-2" onClick={() => openBooking(service.title)}>
                     <CalendarDays className="w-4 h-4" /> Book {service.title}
                   </Button>
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
