@@ -17,6 +17,7 @@ import AdminStaff from "./pages/admin/AdminStaff";
 import AdminReviews from "./pages/admin/AdminReviews";
 import AdminGallery from "./pages/admin/AdminGallery";
 import AdminPromotions from "./pages/admin/AdminPromotions";
+import StaffDashboard from "./pages/staff/StaffDashboard";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/services" element={<ServicesPage />} />
             <Route path="/dashboard" element={<CustomerDashboard />} />
+            <Route path="/staff" element={<StaffDashboard />} />
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path="bookings" element={<AdminBookings />} />
