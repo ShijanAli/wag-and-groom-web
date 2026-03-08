@@ -80,7 +80,7 @@ const Index = () => {
                 <CalendarDays className="w-4 h-4" /> Book Appointment
               </Button>
               <Button size="lg" variant="outline" className="gap-2" asChild>
-                <a href="#services">View Services <ArrowRight className="w-4 h-4" /></a>
+                <Link to="/services">View Services <ArrowRight className="w-4 h-4" /></Link>
               </Button>
             </div>
             <div className="flex items-center gap-6 pt-4">
