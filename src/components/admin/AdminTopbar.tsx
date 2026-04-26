@@ -248,8 +248,8 @@ export function AdminTopbar() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
-              <p className="font-medium">Ryan Cooper</p>
-              <p className="text-xs text-muted-foreground">admin@happypaws.com</p>
+              <p className="font-medium">{user?.name ?? "Guest"}</p>
+              <p className="text-xs text-muted-foreground">{user?.email ?? "—"}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate("/admin/profile")}>
@@ -259,7 +259,7 @@ export function AdminTopbar() {
               <Shield className="w-4 h-4 mr-2" /> Roles & Permissions
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive" onClick={() => navigate("/")}>
+            <DropdownMenuItem className="text-destructive" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" /> Sign Out
             </DropdownMenuItem>
           </DropdownMenuContent>
