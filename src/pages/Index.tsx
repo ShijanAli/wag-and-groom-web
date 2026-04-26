@@ -294,4 +294,29 @@ const Index = () => {
   );
 };
 
+function AuthNavActions({ onBook }: { onBook: () => void }) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  if (user) {
+    return (
+      <div className="flex items-center gap-2">
+        <Link to={roleHomePath[user.role]}>
+          <Button variant="ghost" size="sm"><LayoutDashboard className="w-4 h-4 mr-1.5" />My dashboard</Button>
+        </Link>
+        <Button variant="ghost" size="sm" onClick={() => { logout(); navigate("/"); }}>
+          <LogOut className="w-4 h-4 mr-1.5" />Sign out
+        </Button>
+        <Button size="sm" onClick={onBook}>Book Now</Button>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <Link to="/login"><Button variant="ghost" size="sm">Sign in</Button></Link>
+      <Link to="/register"><Button variant="outline" size="sm">Sign up</Button></Link>
+      <Button size="sm" onClick={onBook}>Book Now</Button>
+    </div>
+  );
+}
+
 export default Index;
