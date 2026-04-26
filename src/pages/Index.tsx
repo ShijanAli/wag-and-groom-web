@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth, roleHomePath } from "@/context/AuthContext";
+import { LogOut, LayoutDashboard } from "lucide-react";
 import { motion } from "framer-motion";
 import { Scissors, Dog, Heart, Clock, Star, ArrowRight, Phone, Mail, MapPin, CalendarDays, Shield, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -53,18 +55,7 @@ const Index = () => {
             <a href="#testimonials" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Reviews</a>
             <a href="#contact" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Contact</a>
           </div>
-          <div className="flex items-center gap-2">
-            <Link to="/dashboard">
-              <Button variant="ghost" size="sm">Dashboard</Button>
-            </Link>
-            <Link to="/staff">
-              <Button variant="ghost" size="sm">Staff</Button>
-            </Link>
-            <Link to="/admin">
-              <Button variant="ghost" size="sm">Admin</Button>
-            </Link>
-            <Button size="sm" onClick={() => { setSelectedService(""); setBookingOpen(true); }}>Book Now</Button>
-          </div>
+          <AuthNavActions onBook={() => { setSelectedService(""); setBookingOpen(true); }} />
         </div>
       </nav>
 
