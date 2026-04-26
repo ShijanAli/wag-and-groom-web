@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/context/AuthContext";
 
 interface MenuItem {
   label: string;
@@ -41,6 +42,8 @@ export function AdminTopbar() {
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const handleSignOut = () => { logout(); navigate("/login", { replace: true }); };
 
   const toggleDark = () => {
     setDarkMode(!darkMode);
