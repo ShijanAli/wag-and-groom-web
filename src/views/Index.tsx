@@ -1,19 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ArrowRight, ArrowUpRight, BadgeCheck, CalendarCheck, CalendarDays, Clock, Dog, Heart, LayoutDashboard,
   LogOut, Mail, MapPin, Menu, PawPrint, Phone, Quote, Scissors, ShieldCheck, Sparkles, Star, X,
 } from "lucide-react";
-import { useAuth, roleHomePath } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { BookingModal } from "@/components/BookingModal";
+import { SiteHeader } from "@/components/site/SiteHeader";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { FAQS, SITE } from "@/lib/site";
 
 const fadeUp = {
@@ -21,15 +21,6 @@ const fadeUp = {
   visible: (i: number = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08, duration: 0.55, ease: "easeOut" as const } }),
 };
 const reveal = { initial: "hidden", whileInView: "visible", viewport: { once: true, margin: "-60px" }, variants: fadeUp } as const;
-
-const navLinks = [
-  { label: "Services", href: "#services" },
-  { label: "About", href: "#about" },
-  { label: "Gallery", href: "#gallery" },
-  { label: "Reviews", href: "#testimonials" },
-  { label: "FAQ", href: "#faq" },
-  { label: "Contact", href: "#contact" },
-];
 
 const services = [
   { icon: Scissors, title: "Dog Grooming", price: "$40", desc: "Bath, haircut, nail trim & ear cleaning by certified groomers.", img: "/images/service-grooming.jpg", alt: "Freshly groomed golden retriever", tag: "Most popular" },
@@ -71,60 +62,16 @@ const perks = [
 const Index = () => {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [selectedService, setSelectedService] = useState("");
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   const openBooking = (service = "") => {
     setSelectedService(service);
     setBookingOpen(true);
-    setMenuOpen(false);
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-clip">
       <BookingModal open={bookingOpen} onOpenChange={setBookingOpen} preSelectedService={selectedService} />
 
-      {/* Navbar */}
-      <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled || menuOpen ? "bg-background/90 backdrop-blur-xl border-b border-border shadow-sm" : "bg-transparent"}`}>
-        <nav aria-label="Main" className="container mx-auto flex items-center justify-between h-[72px] px-4">
-          <Link href="/" className="flex items-center gap-2.5" aria-label="HappyPaws home">
-            <span className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
-              <PawPrint className="w-5 h-5 text-primary-foreground" />
-            </span>
-            <span className="font-display text-xl font-bold tracking-tight">HappyPaws</span>
-          </Link>
-          <ul className="hidden lg:flex items-center gap-8">
-            {navLinks.map((l) => (
-              <li key={l.href}>
-                <a href={l.href} className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">{l.label}</a>
-              </li>
-            ))}
-          </ul>
-          <div className="flex items-center gap-2">
-            <div className="hidden sm:block"><AuthNavActions onBook={() => openBooking()} /></div>
-            <Button size="icon" variant="ghost" className="lg:hidden" aria-label="Toggle menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>
-              {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </Button>
-          </div>
-        </nav>
-        {menuOpen && (
-          <div className="lg:hidden border-t border-border bg-background/95 backdrop-blur-xl">
-            <div className="container mx-auto px-4 py-4 flex flex-col gap-1">
-              {navLinks.map((l) => (
-                <a key={l.href} href={l.href} onClick={() => setMenuOpen(false)} className="px-3 py-3 rounded-xl text-sm font-medium hover:bg-accent">{l.label}</a>
-              ))}
-              <div className="pt-3 sm:hidden"><AuthNavActions onBook={() => openBooking()} /></div>
-            </div>
-          </div>
-        )}
-      </header>
+      <SiteHeader onBook={() => openBooking()} />
 
       <main>
         {/* Hero */}
@@ -221,7 +168,7 @@ const Index = () => {
                       <h3 className="font-display text-xl font-semibold">{s.title}</h3>
                     </div>
                     <p className="text-muted-foreground text-sm mt-3 leading-relaxed flex-1">{s.desc}</p>
-                    <Button variant="ghost" className="mt-5 justify-between px-4 rounded-xl bg-accent/60 hover:bg-primary hover:text-primary-foreground group/btn" onClick={() => openBooking(s.title)}>
+                    <Button variant="ghost" className="mt-5 justify-between px-4 rounded-xl bg-accent/60 hover:bg-primary hover:text-primary-foreground group/btn" onClick={() => openBooking(s.title === "Pet Spa" ? "Pet Spa Treatment" : s.title)}>
                       Book {s.title.toLowerCase()} <ArrowUpRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
                     </Button>
                   </div>
@@ -415,45 +362,10 @@ const Index = () => {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-foreground text-background">
-        <div className="container mx-auto px-4 pt-16 pb-8">
-          <div className="grid md:grid-cols-[1.4fr_1fr_1fr_1fr] gap-10">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2.5">
-                <span className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center"><PawPrint className="w-5 h-5 text-primary-foreground" /></span>
-                <span className="font-display text-xl font-bold">HappyPaws</span>
-              </div>
-              <p className="text-background/60 text-sm max-w-xs leading-relaxed">Professional grooming, spa, walking and sitting for dogs and cats in San Francisco.</p>
-            </div>
-            <FooterCol title="Services" links={[["Dog Grooming", "/services"], ["Dog Walking", "/services"], ["Pet Sitting", "/services"], ["Pet Spa", "/services"]]} />
-            <FooterCol title="Company" links={[["About", "#about"], ["Gallery", "#gallery"], ["Reviews", "#testimonials"], ["FAQ", "#faq"]]} />
-            <FooterCol title="Account" links={[["Sign in", "/login"], ["Create account", "/register"], ["Contact", "#contact"]]} />
-          </div>
-          <div className="mt-12 pt-6 border-t border-background/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-background/50">
-            <p>© {new Date().getFullYear()} HappyPaws. All rights reserved.</p>
-            <p className="flex items-center gap-1.5">Made with <Heart className="w-3.5 h-3.5 fill-primary text-primary" /> for pets everywhere</p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 };
-
-function FooterCol({ title, links }: { title: string; links: [string, string][] }) {
-  return (
-    <nav aria-label={title}>
-      <h3 className="font-semibold mb-4">{title}</h3>
-      <ul className="space-y-2.5 text-sm text-background/60">
-        {links.map(([label, href]) => (
-          <li key={label}>
-            {href.startsWith("#") ? <a href={href} className="hover:text-primary transition-colors">{label}</a> : <Link href={href} className="hover:text-primary transition-colors">{label}</Link>}
-          </li>
-        ))}
-      </ul>
-    </nav>
-  );
-}
 
 function ContactForm() {
   const { toast } = useToast();
@@ -479,31 +391,6 @@ function ContactForm() {
         <label className="block"><span className="sr-only">Message</span><textarea required name="message" rows={5} placeholder="Tell us about your pet and what you need…" className={`${field} resize-none`} /></label>
         <Button type="submit" size="lg" className="w-full h-14 rounded-xl text-base gap-2">{sent ? "Send another message" : "Send message"} <ArrowRight className="w-4 h-4" /></Button>
       </form>
-    </div>
-  );
-}
-
-function AuthNavActions({ onBook }: { onBook: () => void }) {
-  const { user, logout } = useAuth();
-  const router = useRouter();
-  if (user) {
-    return (
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="ghost" size="sm" className="rounded-full" asChild>
-          <Link href={roleHomePath[user.role]}><LayoutDashboard className="w-4 h-4 mr-1.5" />My dashboard</Link>
-        </Button>
-        <Button variant="ghost" size="sm" className="rounded-full" onClick={() => { logout(); router.push("/"); }}>
-          <LogOut className="w-4 h-4 mr-1.5" />Sign out
-        </Button>
-        <Button size="sm" className="rounded-full px-5" onClick={onBook}>Book now</Button>
-      </div>
-    );
-  }
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button variant="ghost" size="sm" className="rounded-full" asChild><Link href="/login">Sign in</Link></Button>
-      <Button variant="outline" size="sm" className="rounded-full bg-card/60" asChild><Link href="/register">Sign up</Link></Button>
-      <Button size="sm" className="rounded-full px-5 shadow-md shadow-primary/30" onClick={onBook}>Book now</Button>
     </div>
   );
 }

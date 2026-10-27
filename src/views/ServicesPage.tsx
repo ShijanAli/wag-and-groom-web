@@ -1,255 +1,274 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
-import { Scissors, Dog, Heart, Shield, Sparkles, Check, ArrowRight, Clock, Star, CalendarDays } from "lucide-react";
+import { motion } from "framer-motion";
+import {
+  ArrowRight, ArrowUpRight, BadgeCheck, CalendarDays, Camera, Check, ChevronRight, Clock, Dog, Heart,
+  PawPrint, Phone, Scissors, ShieldCheck, Sparkles, Star, type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { BookingModal } from "@/components/BookingModal";
+import { SiteHeader } from "@/components/site/SiteHeader";
+import { SiteFooter } from "@/components/site/SiteFooter";
+import { PACKAGES, SERVICES, SERVICE_FAQS } from "@/lib/services";
+import { SITE } from "@/lib/site";
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.5 } }),
+  hidden: { opacity: 0, y: 28 },
+  visible: (i: number = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08, duration: 0.55, ease: "easeOut" as const } }),
+};
+const reveal = { initial: "hidden", whileInView: "visible", viewport: { once: true, margin: "-60px" }, variants: fadeUp } as const;
+
+const icons: Record<string, LucideIcon> = {
+  "dog-grooming": Scissors,
+  "dog-walking": Dog,
+  "pet-sitting": Heart,
+  "pet-daycare": ShieldCheck,
+  "pet-spa": Sparkles,
 };
 
-const services = [
-  {
-    icon: Scissors, title: "Dog Grooming", price: 40, duration: "60 min",
-    desc: "Professional grooming that keeps your dog looking and feeling their best. Our experienced groomers use premium, pet-safe products.",
-    features: ["Bath & blow dry", "Breed-specific haircut", "Nail trimming & filing", "Ear cleaning", "Teeth brushing", "Cologne & bow finish"],
-    image: "🐕",
-  },
-  {
-    icon: Dog, title: "Dog Walking", price: 20, duration: "30 min",
-    desc: "Reliable, professional dog walking with experienced handlers who treat your pup like family.",
-    features: ["Neighborhood or park walks", "GPS-tracked route", "Photo updates sent to you", "Fresh water provided", "Waste cleanup included", "Flexible scheduling"],
-    image: "🦮",
-  },
-  {
-    icon: Heart, title: "Pet Sitting", price: 35, duration: "Full Day",
-    desc: "In-home pet sitting so your furry friend stays comfortable in their own environment while you're away.",
-    features: ["Feeding & fresh water", "Medication administration", "Playtime & exercise", "Litter box / cleanup", "Daily photo updates", "Mail & plant care"],
-    image: "🏠",
-  },
-  {
-    icon: Shield, title: "Pet Daycare", price: 30, duration: "Full Day",
-    desc: "A safe, fun, and supervised environment where your pet can socialize and play all day long.",
-    features: ["Supervised group play", "Indoor & outdoor areas", "Rest periods", "Healthy snacks", "Temperament matching", "Webcam access"],
-    image: "🐾",
-  },
-  {
-    icon: Sparkles, title: "Pet Spa Treatment", price: 60, duration: "90 min",
-    desc: "The ultimate pampering experience for your pet. Premium products and relaxing treatments for total rejuvenation.",
-    features: ["Aromatherapy bath", "Deep conditioning treatment", "Relaxation massage", "Paw & pad moisturizing", "Premium shampoo & conditioner", "Blueberry facial"],
-    image: "✨",
-  },
-];
-
-const packages = [
-  {
-    name: "Basic Grooming",
-    price: 25,
-    desc: "Essential grooming to keep your pet clean and tidy.",
-    features: ["Bath & blow dry", "Nail trim", "Ear cleaning", "Brush out"],
-    popular: false,
-  },
-  {
-    name: "Full Grooming",
-    price: 40,
-    desc: "Complete grooming service for a fresh, polished look.",
-    features: ["Everything in Basic", "Breed-specific haircut", "Teeth brushing", "Cologne & bow", "Sanitary trim"],
-    popular: true,
-  },
-  {
-    name: "Premium Spa",
-    price: 75,
-    desc: "The ultimate luxury grooming and wellness experience.",
-    features: ["Everything in Full", "Aromatherapy bath", "Relaxation massage", "Deep conditioning", "Paw moisturizing", "Blueberry facial"],
-    popular: false,
-  },
+const guarantees = [
+  { icon: ShieldCheck, title: "Certified & insured", desc: "Every team member is trained, background-checked and pet first-aid certified." },
+  { icon: Sparkles, title: "Pet-safe products", desc: "Gentle, skin-friendly shampoos and conditioners, never harsh chemicals." },
+  { icon: Camera, title: "Photo updates", desc: "We send you photos during every visit so you can see the fun." },
+  { icon: CalendarDays, title: "Free cancellation", desc: "Change or cancel up to 24 hours before your appointment, no fees." },
 ];
 
 export default function ServicesPage() {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [selectedService, setSelectedService] = useState("");
-  const openBooking = (svc: string) => { setSelectedService(svc); setBookingOpen(true); };
+  const openBooking = (svc = "") => { setSelectedService(svc); setBookingOpen(true); };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground overflow-x-clip">
       <BookingModal open={bookingOpen} onOpenChange={setBookingOpen} preSelectedService={selectedService} />
-      {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="container mx-auto flex items-center justify-between h-16 px-4">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
-              <Dog className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-display text-xl font-bold text-foreground">HappyPaws</span>
-          </Link>
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="/" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Home</Link>
-            <Link href="/services" className="text-sm font-medium text-foreground transition-colors">Services</Link>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/admin"><Button variant="ghost" size="sm">Admin</Button></Link>
-            <Button size="sm" onClick={() => openBooking("")}>Book Now</Button>
-          </div>
-        </div>
-      </nav>
+      <SiteHeader onBook={() => openBooking()} />
 
-      {/* Hero */}
-      <section className="pt-16">
-        <div className="bg-accent/50 py-16 md:py-24">
-          <div className="container mx-auto px-4 text-center">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-              <span className="text-primary font-medium text-sm uppercase tracking-wider">Our Services</span>
-              <h1 className="text-4xl md:text-5xl font-display font-bold text-foreground mt-3">
-                Premium Care for Every Pet
-              </h1>
-              <p className="text-lg text-muted-foreground mt-4 max-w-2xl mx-auto">
-                From basic grooming to luxury spa treatments, we offer a complete range of professional pet care services tailored to your furry friend's needs.
-              </p>
-            </motion.div>
-          </div>
-        </div>
-      </section>
+      <main>
+        {/* Hero */}
+        <section className="relative pt-[72px] overflow-hidden">
+          <div className="absolute inset-0 -z-10 bg-gradient-to-b from-accent/70 via-background to-background" />
+          <div className="absolute -top-24 -left-24 -z-10 w-[420px] h-[420px] rounded-full bg-primary/15 blur-3xl" />
+          <div className="absolute top-1/3 -right-24 -z-10 w-[360px] h-[360px] rounded-full bg-secondary/15 blur-3xl" />
 
-      {/* Detailed Services */}
-      <section className="py-20">
-        <div className="container mx-auto px-4 space-y-16">
-          {services.map((service, idx) => (
-            <motion.div
-              key={service.title}
-              className={`flex flex-col ${idx % 2 === 1 ? "lg:flex-row-reverse" : "lg:flex-row"} gap-8 lg:gap-14 items-center`}
-              initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}
-            >
-              {/* Visual */}
-              <div className="flex-1 w-full">
-                <div className="bg-accent rounded-3xl p-8 md:p-12 flex flex-col items-center justify-center aspect-[4/3] relative overflow-hidden">
-                  <span className="text-8xl md:text-9xl mb-4">{service.image}</span>
-                  <div className="absolute top-4 right-4 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-bold">
-                    From ${service.price}
-                  </div>
-                  <div className="absolute bottom-4 left-4 flex items-center gap-1 text-sm text-accent-foreground bg-background/80 backdrop-blur px-3 py-1.5 rounded-full">
-                    <Clock className="w-3 h-3" /> {service.duration}
-                  </div>
-                </div>
-              </div>
-
-              {/* Details */}
-              <div className="flex-1 space-y-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <service.icon className="w-6 h-6 text-primary" />
-                  </div>
-                  <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground">{service.title}</h2>
-                </div>
-                <p className="text-muted-foreground leading-relaxed">{service.desc}</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {service.features.map((f) => (
-                    <div key={f} className="flex items-center gap-2 text-sm text-foreground">
-                      <Check className="w-4 h-4 text-success shrink-0" />
-                      <span>{f}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-center gap-4 pt-2">
-                  <Button className="gap-2" onClick={() => openBooking(service.title)}>
-                    <CalendarDays className="w-4 h-4" /> Book {service.title}
+          <div className="container mx-auto px-4 pt-10 pb-16 lg:pt-16 lg:pb-24">
+            <nav aria-label="Breadcrumb" className="mb-8">
+              <ol className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <li><Link href="/" className="hover:text-primary transition-colors">Home</Link></li>
+                <li aria-hidden><ChevronRight className="w-4 h-4" /></li>
+                <li aria-current="page" className="text-foreground font-medium">Services</li>
+              </ol>
+            </nav>
+            <div className="grid lg:grid-cols-[1.1fr_1fr] gap-12 items-center">
+              <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="space-y-6">
+                <span className="inline-flex items-center gap-2 pl-2 pr-4 py-1.5 rounded-full bg-card border border-border shadow-sm text-sm font-medium">
+                  <span className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center"><PawPrint className="w-3.5 h-3.5 text-primary" /></span>
+                  Our services &amp; pricing
+                </span>
+                <h1 className="font-display text-4xl sm:text-6xl font-bold leading-[1.05] tracking-tight">
+                  Premium care for <span className="text-primary">every pet</span>
+                </h1>
+                <p className="text-lg text-muted-foreground max-w-xl leading-relaxed">
+                  From a quick walk to a full luxury spa day, explore everything HappyPaws offers. Transparent prices, gentle hands and easy online booking.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Button size="lg" className="h-14 px-8 rounded-full text-base gap-2 shadow-xl shadow-primary/30 hover:-translate-y-0.5 transition-transform" onClick={() => openBooking()}>
+                    <CalendarDays className="w-5 h-5" /> Book appointment
                   </Button>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Star className="w-4 h-4 fill-primary text-primary" />
-                    <span className="font-medium text-foreground">4.9</span>
-                    <span>(120+ reviews)</span>
-                  </div>
+                  <Button size="lg" variant="outline" className="h-14 px-8 rounded-full text-base gap-2 bg-card/60" asChild>
+                    <a href="#packages">See pricing <ArrowRight className="w-4 h-4" /></a>
+                  </Button>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* Packages */}
-      <section className="py-20 bg-muted/50">
-        <div className="container mx-auto px-4">
-          <motion.div className="text-center mb-14" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}>
-            <span className="text-primary font-medium text-sm uppercase tracking-wider">Packages</span>
-            <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mt-2">Choose Your Package</h2>
-            <p className="text-muted-foreground mt-3 max-w-lg mx-auto">Save more with our bundled grooming packages. Perfect for regular visits.</p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            {packages.map((pkg, i) => (
-              <motion.div key={pkg.name} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}>
-                <Card className={`border-border h-full relative overflow-hidden ${pkg.popular ? "ring-2 ring-primary shadow-xl" : "hover:shadow-lg"} transition-shadow`}>
-                  {pkg.popular && (
-                    <div className="bg-primary text-primary-foreground text-xs font-bold text-center py-1.5">
-                      MOST POPULAR
-                    </div>
-                  )}
-                  <CardContent className="p-6 flex flex-col h-full">
-                    <h3 className="font-display text-xl font-semibold text-card-foreground">{pkg.name}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">{pkg.desc}</p>
-                    <div className="mt-4 mb-6">
-                      <span className="text-4xl font-bold text-foreground">${pkg.price}</span>
-                      <span className="text-muted-foreground text-sm"> / session</span>
-                    </div>
-                    <div className="space-y-2.5 flex-1">
-                      {pkg.features.map((f) => (
-                        <div key={f} className="flex items-center gap-2 text-sm text-card-foreground">
-                          <Check className="w-4 h-4 text-success shrink-0" />
-                          <span>{f}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <Button className="w-full mt-6 gap-2" variant={pkg.popular ? "default" : "outline"} onClick={() => openBooking(pkg.name)}>
-                      Book {pkg.name} <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
+                <ul className="flex flex-wrap gap-x-6 gap-y-2 pt-2 text-sm text-muted-foreground">
+                  {["5 specialised services", "From $20", "Free cancellation"].map((t) => (
+                    <li key={t} className="flex items-center gap-2"><BadgeCheck className="w-4 h-4 text-secondary" />{t}</li>
+                  ))}
+                </ul>
               </motion.div>
-            ))}
+
+              <motion.div initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, delay: 0.15 }} className="relative max-w-xl mx-auto w-full">
+                <div className="absolute -inset-4 rounded-[3rem] bg-gradient-to-br from-primary/30 to-secondary/20 blur-2xl -z-10" />
+                <div className="relative aspect-[5/4] rounded-[2.5rem] overflow-hidden shadow-2xl shadow-foreground/15 ring-1 ring-border">
+                  <Image src="/images/hero-grooming.jpg" alt="Golden retriever enjoying a bath with a HappyPaws groomer" fill priority sizes="(max-width: 1024px) 90vw, 520px" className="object-cover object-[65%_50%]" />
+                </div>
+                <div className="absolute -bottom-6 -left-4 sm:-left-8 w-36 h-36 sm:w-44 sm:h-44 rounded-3xl overflow-hidden border-4 border-background shadow-xl">
+                  <Image src="/images/service-spa.jpg" alt="Relaxed cat after a spa treatment" fill sizes="180px" className="object-cover" />
+                </div>
+                <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute -top-4 -right-2 sm:-right-6 bg-card rounded-2xl shadow-xl border border-border p-3.5 pr-5 flex items-center gap-3">
+                  <span className="w-11 h-11 rounded-xl bg-primary/15 flex items-center justify-center"><Star className="w-5 h-5 fill-primary text-primary" /></span>
+                  <div><p className="text-sm font-semibold leading-tight">4.9 rating</p><p className="text-xs text-muted-foreground">2,500+ happy pets</p></div>
+                </motion.div>
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* Quick jump */}
+        <div className="sticky top-[72px] z-40 border-y border-border bg-background/85 backdrop-blur-xl">
+          <div className="container mx-auto px-4">
+            <ul className="flex gap-2 overflow-x-auto py-3 no-scrollbar" aria-label="Jump to a service">
+              {SERVICES.map((s) => {
+                const Icon = icons[s.slug];
+                return (
+                  <li key={s.slug} className="shrink-0">
+                    <a href={`#${s.slug}`} className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-card border border-border hover:border-primary/50 hover:text-primary transition-colors">
+                      <Icon className="w-4 h-4" />{s.title}
+                    </a>
+                  </li>
+                );
+              })}
+              <li className="shrink-0"><a href="#packages" className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-primary text-primary-foreground">Packages</a></li>
+            </ul>
           </div>
         </div>
-      </section>
 
-      {/* CTA */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <motion.div
-            className="bg-primary rounded-3xl p-10 md:p-16 text-center"
-            initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}
-          >
-            <h2 className="text-3xl md:text-4xl font-display font-bold text-primary-foreground">
-              Ready to Pamper Your Pet?
-            </h2>
-            <p className="text-primary-foreground/80 mt-3 max-w-lg mx-auto">
-              Book your first appointment today and give your furry friend the care they deserve.
-            </p>
-            <div className="flex flex-wrap justify-center gap-4 mt-8">
-              <Button size="lg" variant="secondary" className="gap-2" onClick={() => openBooking("")}>
-                <CalendarDays className="w-4 h-4" /> Book Appointment
-              </Button>
-              <Button size="lg" variant="outline" className="gap-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" asChild>
-                <Link href="/#contact">Contact Us</Link>
-              </Button>
+        {/* Detailed services */}
+        <section className="py-24">
+          <div className="container mx-auto px-4 space-y-24">
+            {SERVICES.map((s, idx) => {
+              const Icon = icons[s.slug];
+              return (
+                <motion.article key={s.slug} id={s.slug} {...reveal} custom={0} className="scroll-mt-40 grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+                  <div className={`relative ${idx % 2 === 1 ? "lg:order-2" : ""}`}>
+                    <div className="absolute -inset-3 rounded-[2.5rem] bg-gradient-to-br from-primary/20 to-secondary/10 blur-xl -z-10" />
+                    <div className="relative aspect-[4/3] rounded-[2rem] overflow-hidden shadow-2xl shadow-foreground/10 ring-1 ring-border group">
+                      <Image src={s.image} alt={s.alt} fill sizes="(max-width: 1024px) 92vw, 560px" className="object-cover group-hover:scale-105 transition-transform duration-700" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-foreground/35 via-transparent to-transparent" />
+                      <span className="absolute top-5 right-5 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-bold shadow-lg">From ${s.price}</span>
+                      <span className="absolute bottom-5 left-5 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-background/90 backdrop-blur text-sm font-medium">
+                        <Clock className="w-4 h-4 text-primary" />{s.duration}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-4">
+                      <span className="w-14 h-14 rounded-2xl bg-accent flex items-center justify-center"><Icon className="w-7 h-7 text-primary" /></span>
+                      <div>
+                        <p className="text-primary text-sm font-semibold uppercase tracking-[0.15em]">{s.tagline}</p>
+                        <h2 className="font-display text-3xl md:text-4xl font-bold leading-tight">{s.title}</h2>
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground text-lg leading-relaxed">{s.desc}</p>
+                    <ul className="grid sm:grid-cols-2 gap-3">
+                      {s.features.map((f) => (
+                        <li key={f} className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3 text-sm font-medium">
+                          <span className="w-6 h-6 rounded-full bg-secondary/15 flex items-center justify-center shrink-0"><Check className="w-3.5 h-3.5 text-secondary" /></span>{f}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="flex flex-wrap items-center gap-4 pt-2">
+                      <Button size="lg" className="rounded-full h-12 px-7 gap-2 shadow-lg shadow-primary/25" onClick={() => openBooking(s.title)}>
+                        <CalendarDays className="w-4 h-4" /> Book {s.title}
+                      </Button>
+                      <p className="text-sm text-muted-foreground"><span className="text-2xl font-bold text-foreground">${s.price}</span> / session</p>
+                    </div>
+                  </div>
+                </motion.article>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Guarantees */}
+        <section className="py-20 bg-muted/50">
+          <div className="container mx-auto px-4">
+            <motion.div {...reveal} custom={0} className="max-w-2xl mx-auto text-center mb-12">
+              <span className="text-primary font-semibold text-sm uppercase tracking-[0.2em]">Included with every visit</span>
+              <h2 className="font-display text-3xl md:text-5xl font-bold mt-3">The HappyPaws promise</h2>
+            </motion.div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {guarantees.map((g, i) => (
+                <motion.div key={g.title} {...reveal} custom={i} className="bg-card rounded-3xl p-7 border border-border hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                  <span className="w-12 h-12 rounded-2xl bg-accent flex items-center justify-center mb-5"><g.icon className="w-6 h-6 text-primary" /></span>
+                  <h3 className="font-display text-lg font-semibold">{g.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{g.desc}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Packages */}
+        <section id="packages" className="py-24 scroll-mt-32">
+          <div className="container mx-auto px-4">
+            <motion.div {...reveal} custom={0} className="max-w-2xl mx-auto text-center mb-14">
+              <span className="text-primary font-semibold text-sm uppercase tracking-[0.2em]">Grooming packages</span>
+              <h2 className="font-display text-3xl md:text-5xl font-bold mt-3">Choose your package</h2>
+              <p className="text-muted-foreground mt-4 text-lg">Bundled grooming for every coat and budget. Perfect for regular visits.</p>
+            </motion.div>
+            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto items-stretch">
+              {PACKAGES.map((p, i) => (
+                <motion.div key={p.name} {...reveal} custom={i}
+                  className={`relative flex flex-col rounded-3xl p-8 border transition-all duration-300 ${p.popular
+                    ? "bg-foreground text-background border-foreground shadow-2xl shadow-primary/20 md:-translate-y-4"
+                    : "bg-card border-border hover:shadow-xl hover:-translate-y-1"}`}>
+                  {p.popular && <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-bold tracking-wide shadow-lg">MOST POPULAR</span>}
+                  <h3 className="font-display text-2xl font-semibold">{p.name}</h3>
+                  <p className={`text-sm mt-2 ${p.popular ? "text-background/65" : "text-muted-foreground"}`}>{p.desc}</p>
+                  <p className="mt-6 mb-7"><span className="font-display text-5xl font-bold">${p.price}</span><span className={`text-sm ${p.popular ? "text-background/60" : "text-muted-foreground"}`}> / session</span></p>
+                  <ul className="space-y-3 flex-1">
+                    {p.features.map((f) => (
+                      <li key={f} className="flex items-center gap-3 text-sm">
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${p.popular ? "bg-primary" : "bg-secondary/15"}`}><Check className={`w-3 h-3 ${p.popular ? "text-primary-foreground" : "text-secondary"}`} /></span>{f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button size="lg" variant={p.popular ? "default" : "outline"} className="mt-8 rounded-full h-12 gap-2" onClick={() => openBooking(p.name)}>
+                    Book {p.name} <ArrowUpRight className="w-4 h-4" />
+                  </Button>
+                </motion.div>
+              ))}
+            </div>
+            <p className="text-center text-sm text-muted-foreground mt-10">Prices shown are starting rates. Final price depends on your pet&apos;s size and coat and is confirmed before we begin.</p>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section id="faq" className="py-24 bg-muted/50 scroll-mt-16">
+          <div className="container mx-auto px-4 grid lg:grid-cols-[1fr_1.4fr] gap-14">
+            <motion.div {...reveal} custom={0} className="lg:sticky lg:top-40 self-start space-y-4">
+              <span className="text-primary font-semibold text-sm uppercase tracking-[0.2em]">Service FAQ</span>
+              <h2 className="font-display text-3xl md:text-5xl font-bold leading-tight">Good to know before you book</h2>
+              <p className="text-muted-foreground text-lg">Still unsure which service suits your pet? Our team is happy to recommend one.</p>
+              <Button variant="outline" className="rounded-full gap-2 bg-card" asChild><Link href="/#contact">Ask our team <ArrowRight className="w-4 h-4" /></Link></Button>
+            </motion.div>
+            <motion.div {...reveal} custom={1}>
+              <Accordion type="single" collapsible defaultValue="item-0" className="space-y-3">
+                {SERVICE_FAQS.map((f, i) => (
+                  <AccordionItem key={f.q} value={`item-${i}`} className="bg-card border border-border rounded-2xl px-6 data-[state=open]:shadow-lg data-[state=open]:border-primary/40 transition-all">
+                    <AccordionTrigger className="text-left font-semibold hover:no-underline py-5">{f.q}</AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground leading-relaxed">{f.a}</AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="px-4 py-24">
+          <motion.div {...reveal} custom={0} className="container mx-auto relative rounded-[2.5rem] overflow-hidden min-h-[340px] flex items-center">
+            <Image src="/images/gallery-puppy.jpg" alt="" aria-hidden fill sizes="100vw" className="object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-foreground/90 via-foreground/70 to-foreground/20" />
+            <div className="relative p-8 md:p-16 max-w-2xl text-background space-y-5">
+              <h2 className="font-display text-3xl md:text-5xl font-bold leading-tight">Ready to pamper your pet?</h2>
+              <p className="text-background/80 text-lg">Book your first appointment today and give your furry friend the care they deserve.</p>
+              <div className="flex flex-wrap gap-3 pt-2">
+                <Button size="lg" className="rounded-full h-14 px-8 gap-2 shadow-xl shadow-primary/30" onClick={() => openBooking()}><CalendarDays className="w-5 h-5" /> Book now</Button>
+                <Button size="lg" variant="outline" className="rounded-full h-14 px-8 gap-2 bg-transparent text-background border-background/40 hover:bg-background hover:text-foreground" asChild>
+                  <a href={`tel:${SITE.phoneHref}`}><Phone className="w-4 h-4" /> {SITE.phone}</a>
+                </Button>
+              </div>
             </div>
           </motion.div>
-        </div>
-      </section>
+        </section>
+      </main>
 
-      {/* Footer */}
-      <footer className="bg-foreground py-12">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-              <Dog className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="font-display text-lg font-bold text-background">HappyPaws</span>
-          </div>
-          <p className="text-background/60 text-sm">© 2026 HappyPaws. All rights reserved.</p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
