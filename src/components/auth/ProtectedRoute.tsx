@@ -1,4 +1,7 @@
-import { Navigate, useLocation } from "react-router-dom";
+"use client";
+
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth, UserRole, roleHomePath } from "@/context/AuthContext";
 
 interface Props {
@@ -8,22 +11,23 @@ interface Props {
 
 export function ProtectedRoute({ children, allowedRoles }: Props) {
   const { user, loading } = useAuth();
-  const location = useLocation();
+  const router = useRouter();
+  const pathname = usePathname();
 
-  if (loading) {
+  const forbidden = !!user && !!allowedRoles && !allowedRoles.includes(user.role);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) router.replace(`/login?from=${encodeURIComponent(pathname)}`);
+    else if (forbidden) router.replace(roleHomePath[user.role]);
+  }, [loading, user, forbidden, pathname, router]);
+
+  if (loading || !user || forbidden) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-muted-foreground text-sm">Loading…</div>
       </div>
     );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to={roleHomePath[user.role]} replace />;
   }
 
   return <>{children}</>;

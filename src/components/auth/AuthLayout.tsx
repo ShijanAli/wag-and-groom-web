@@ -1,4 +1,6 @@
-import { Link } from "react-router-dom";
+"use client";
+
+import Link from "next/link";
 import { Dog } from "lucide-react";
 
 interface Props {
@@ -13,7 +15,7 @@ export function AuthLayout({ title, subtitle, children, footer }: Props) {
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
       {/* Brand panel */}
       <div className="hidden lg:flex flex-col justify-between p-10 bg-gradient-to-br from-primary to-primary/70 text-primary-foreground relative overflow-hidden">
-        <Link to="/" className="flex items-center gap-2 relative z-10">
+        <Link href="/" className="flex items-center gap-2 relative z-10">
           <div className="w-10 h-10 rounded-full bg-primary-foreground/20 backdrop-blur flex items-center justify-center">
             <Dog className="w-5 h-5" />
           </div>
@@ -34,7 +36,7 @@ export function AuthLayout({ title, subtitle, children, footer }: Props) {
       {/* Form panel */}
       <div className="flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-md space-y-6">
-          <Link to="/" className="lg:hidden flex items-center gap-2 mb-4">
+          <Link href="/" className="lg:hidden flex items-center gap-2 mb-4">
             <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
               <Dog className="w-5 h-5 text-primary-foreground" />
             </div>
