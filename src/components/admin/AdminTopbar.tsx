@@ -1,6 +1,8 @@
+"use client";
+
 import { Bell, Globe, Moon, Sun, User, Search, Shield, LogOut, LayoutDashboard, CalendarDays, Scissors, Users, UserCog, Star, Image, Tag, Lock, Settings, ChevronRight } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,9 +43,9 @@ export function AdminTopbar() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const navigate = useNavigate();
+  const router = useRouter();
   const { user, logout } = useAuth();
-  const handleSignOut = () => { logout(); navigate("/login", { replace: true }); };
+  const handleSignOut = () => { logout(); router.replace("/login"); };
 
   const toggleDark = () => {
     setDarkMode(!darkMode);
@@ -91,7 +93,7 @@ export function AdminTopbar() {
   };
 
   const navigateTo = (url: string) => {
-    navigate(url);
+    router.push(url);
     setSearchQuery("");
     setShowResults(false);
     inputRef.current?.blur();
@@ -252,10 +254,10 @@ export function AdminTopbar() {
               <p className="text-xs text-muted-foreground">{user?.email ?? "—"}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate("/admin/profile")}>
+            <DropdownMenuItem onClick={() => router.push("/admin/profile")}>
               <User className="w-4 h-4 mr-2" /> Profile Settings
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/admin/roles")}>
+            <DropdownMenuItem onClick={() => router.push("/admin/roles")}>
               <Shield className="w-4 h-4 mr-2" /> Roles & Permissions
             </DropdownMenuItem>
             <DropdownMenuSeparator />

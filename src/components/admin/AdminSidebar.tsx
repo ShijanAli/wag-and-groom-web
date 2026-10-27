@@ -1,6 +1,8 @@
+"use client";
+
 import { Dog, LayoutDashboard, CalendarDays, Scissors, Users, UserCog, Star, Image, Tag, ChevronLeft, Shield, User } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { usePathname } from "next/navigation";
 import {
   Sidebar,
   SidebarContent,
@@ -36,8 +38,8 @@ const systemItems = [
 export function AdminSidebar() {
   const { state, toggleSidebar } = useSidebar();
   const collapsed = state === "collapsed";
-  const location = useLocation();
-  const isActive = (path: string) => location.pathname === path;
+  const pathname = usePathname();
+  const isActive = (path: string) => pathname === path;
 
   const renderGroup = (label: string, items: typeof mainItems) => (
     <SidebarGroup>
@@ -47,7 +49,7 @@ export function AdminSidebar() {
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                <NavLink to={item.url} end className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                <NavLink href={item.url} end className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
                   <item.icon className="mr-2 h-4 w-4" />
                   {!collapsed && <span>{item.title}</span>}
                 </NavLink>
