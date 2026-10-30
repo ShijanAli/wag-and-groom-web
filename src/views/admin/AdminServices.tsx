@@ -1,198 +1,297 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Scissors, Dog, Heart, Shield, Sparkles, Edit, Trash2 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useMemo } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { Loader2, Pencil, Plus, Scissors, Star, Trash2 } from "lucide-react";
+import { z } from "zod";
+import { Can } from "@/components/common/Can";
+import { ChipList } from "@/components/common/Chip";
+import { DataTable, DataTableToolbar, RowActions, TableFilter } from "@/components/common/data-table";
+import { ChipsField, MultiSelectField } from "@/components/common/form/choice-fields";
+import { FieldRow, SelectField, SwitchField, TextareaField, TextField } from "@/components/common/form/fields";
+import { FormModal } from "@/components/common/form/FormModal";
+import { FormSection } from "@/components/common/form/FormSection";
+import { ImageUploadField } from "@/components/common/ImageUpload";
+import { PageHeader } from "@/components/common/PageHeader";
+import { StatusSwitch } from "@/components/common/StatusSwitch";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
+import { useCrudDelete, useCrudEditor } from "@/hooks/use-crud";
+import { useListParams } from "@/hooks/use-list-params";
+import { formatDuration, formatMoney } from "@/lib/format";
+import { PERMISSIONS as P } from "@/lib/permissions";
+import {
+  STATUS_OPTIONS,
+  serviceHooks,
+  useCategoryOptions,
+  usePetTypeOptions,
+  useServiceStatus,
+  type ServiceInput,
+} from "@/features/catalog/api";
+import { useStaffOptions } from "@/features/staff/api";
+import type { Service } from "@/types/models";
 
-interface Service {
-  id: string;
-  icon: string;
-  name: string;
-  price: string;
-  duration: string;
-  status: "Active" | "Inactive";
-  bookings: number;
-}
+const money = (label: string) =>
+  z.number({ required_error: `${label} is required`, invalid_type_error: `${label} is required` }).min(0, "Can't be negative").max(99_999_999);
 
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  Scissors, Dog, Heart, Shield, Sparkles,
-};
+const schema = z
+  .object({
+    name: z.string().trim().min(2, "At least 2 characters").max(150),
+    categoryId: z.number({ required_error: "Choose a category" }).int().positive("Choose a category"),
+    shortDescription: z.string().trim().max(255),
+    description: z.string().trim().max(10_000),
+    price: money("Price"),
+    discountPrice: z.number().min(0).max(99_999_999).optional(),
+    durationMinutes: z
+      .number({ required_error: "Duration is required", invalid_type_error: "Duration is required" })
+      .int()
+      .min(5, "At least 5 minutes")
+      .max(720, "At most 12 hours")
+      .multipleOf(5, "Use steps of 5 minutes"),
+    image: z.string().url().nullable(),
+    petTypeIds: z.array(z.number()).min(1, "Select at least one pet type"),
+    staffIds: z.array(z.number()),
+    maxPetsPerBooking: z.number({ invalid_type_error: "Enter a number" }).int().min(1).max(10),
+    sortOrder: z.number({ invalid_type_error: "Enter a number" }).int().min(0).max(100_000),
+    isFeatured: z.boolean(),
+    requiresVaccination: z.boolean(),
+    status: z.enum(["active", "inactive"]),
+  })
+  .refine((v) => v.discountPrice === undefined || v.discountPrice < v.price, {
+    path: ["discountPrice"],
+    message: "Must be lower than the price",
+  });
+type Form = z.output<typeof schema>;
 
-const initialServices: Service[] = [
-  { id: "s1", icon: "Scissors", name: "Dog Grooming", price: "$40", duration: "60 min", status: "Active", bookings: 142 },
-  { id: "s2", icon: "Dog", name: "Dog Walking", price: "$20", duration: "30 min", status: "Active", bookings: 98 },
-  { id: "s3", icon: "Heart", name: "Pet Sitting", price: "$35", duration: "Full Day", status: "Active", bookings: 56 },
-  { id: "s4", icon: "Shield", name: "Pet Daycare", price: "$30", duration: "Full Day", status: "Active", bookings: 74 },
-  { id: "s5", icon: "Sparkles", name: "Pet Spa Treatment", price: "$60", duration: "90 min", status: "Active", bookings: 38 },
-];
+const toForm = (s: Service | null): z.input<typeof schema> => ({
+  name: s?.name ?? "",
+  categoryId: s?.categoryId ?? (undefined as unknown as number),
+  shortDescription: s?.shortDescription ?? "",
+  description: s?.description ?? "",
+  price: s ? Number(s.price) : (undefined as unknown as number),
+  discountPrice: s?.discountPrice ? Number(s.discountPrice) : undefined,
+  durationMinutes: s?.durationMinutes ?? 60,
+  image: s?.image ?? null,
+  petTypeIds: s?.petTypes.map((t) => t.id) ?? [],
+  staffIds: s?.staff?.map((m) => m.id) ?? [],
+  maxPetsPerBooking: s?.maxPetsPerBooking ?? 1,
+  sortOrder: s?.sortOrder ?? 0,
+  isFeatured: s?.isFeatured ?? false,
+  requiresVaccination: s?.requiresVaccination ?? false,
+  status: s?.status ?? "active",
+});
 
-let nextId = 6;
+const toInput = (v: Form): ServiceInput => ({
+  ...v,
+  shortDescription: v.shortDescription || null,
+  description: v.description || null,
+  discountPrice: v.discountPrice ?? null,
+});
+
+const FEATURED_OPTIONS = [{ label: "Featured only", value: "true" }];
 
 export default function AdminServices() {
-  const [services, setServices] = useState<Service[]>(initialServices);
-  const [showAdd, setShowAdd] = useState(false);
-  const [editService, setEditService] = useState<Service | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const { toast } = useToast();
+  const { can } = useAuth();
+  const list = useListParams({ defaults: { sortBy: "sortOrder", sortOrder: "asc" } });
+  const query = serviceHooks.useList(list.params);
+  const categories = useCategoryOptions();
+  const petTypes = usePetTypeOptions();
+  const staff = useStaffOptions();
+  const setStatus = useServiceStatus();
 
-  const [form, setForm] = useState({ name: "", price: "", duration: "", icon: "Scissors" });
+  const editor = useCrudEditor<Service, Form, ServiceInput>({ hooks: serviceHooks, entity: "service", toForm, toInput });
+  // list rows don't include assigned staff → load the full service before editing
+  const detail = serviceHooks.useOne(editor.item?.id);
+  const loadingDetail = !!editor.item && editor.modalProps.open && !detail.data;
+  const remove = useCrudDelete(serviceHooks, "service", (s: Service) => s.name);
+  const canUpdate = can(P.SERVICE.UPDATE);
 
-  const resetForm = () => setForm({ name: "", price: "", duration: "", icon: "Scissors" });
-
-  const handleAdd = () => {
-    if (!form.name || !form.price || !form.duration) {
-      toast({ title: "Missing fields", description: "Please fill all required fields.", variant: "destructive" });
-      return;
-    }
-    setServices((prev) => [...prev, { id: `s${nextId++}`, ...form, status: "Active", bookings: 0 }]);
-    setShowAdd(false);
-    resetForm();
-    toast({ title: "Service added", description: `${form.name} has been added to your catalog.` });
-  };
-
-  const handleEdit = () => {
-    if (!editService) return;
-    setServices((prev) => prev.map((s) => (s.id === editService.id ? editService : s)));
-    setEditService(null);
-    toast({ title: "Service updated", description: `${editService.name} has been updated.` });
-  };
-
-  const handleDelete = () => {
-    if (!deleteTarget) return;
-    const svc = services.find((s) => s.id === deleteTarget);
-    setServices((prev) => prev.filter((s) => s.id !== deleteTarget));
-    setDeleteTarget(null);
-    toast({ title: "Service deleted", description: `${svc?.name} has been removed.` });
-  };
-
-  const toggleStatus = (id: string) => {
-    setServices((prev) => prev.map((s) => (s.id === id ? { ...s, status: s.status === "Active" ? "Inactive" as const : "Active" as const } : s)));
-  };
+  const columns = useMemo<ColumnDef<Service>[]>(
+    () => [
+      {
+        id: "name",
+        header: "Service",
+        enableSorting: true,
+        cell: ({ row }) => {
+          const s = row.original;
+          return (
+            <div className="flex min-w-[220px] items-center gap-3">
+              {s.image ? (
+                // eslint-disable-next-line @next/next/no-img-element -- Cloudinary thumbnail
+                <img src={s.image} alt="" className="h-11 w-11 rounded-lg object-cover" />
+              ) : (
+                <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                  <Scissors className="h-4 w-4" />
+                </span>
+              )}
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 truncate font-medium">
+                  {s.name}
+                  {s.isFeatured && <Star className="h-3.5 w-3.5 fill-warning text-warning" aria-label="Featured" />}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">{s.category.name}</p>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        id: "petTypes",
+        header: "For",
+        cell: ({ row }) => <ChipList items={row.original.petTypes} max={4} />,
+      },
+      {
+        id: "price",
+        header: "Price",
+        enableSorting: true,
+        cell: ({ row }) => {
+          const { price, discountPrice } = row.original;
+          return discountPrice ? (
+            <div className="whitespace-nowrap">
+              <span className="font-semibold text-primary">{formatMoney(discountPrice)}</span>{" "}
+              <span className="text-xs text-muted-foreground line-through">{formatMoney(price)}</span>
+            </div>
+          ) : (
+            <span className="whitespace-nowrap font-semibold">{formatMoney(price)}</span>
+          );
+        },
+      },
+      { id: "durationMinutes", header: "Duration", enableSorting: true, cell: ({ row }) => formatDuration(row.original.durationMinutes) },
+      {
+        id: "avgRating",
+        header: "Rating",
+        enableSorting: true,
+        cell: ({ row }) =>
+          row.original.reviewsCount ? (
+            <span className="inline-flex items-center gap-1 whitespace-nowrap">
+              <Star className="h-3.5 w-3.5 fill-warning text-warning" /> {row.original.avgRating}
+              <span className="text-xs text-muted-foreground">({row.original.reviewsCount})</span>
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">No reviews</span>
+          ),
+      },
+      {
+        id: "status",
+        header: "Status",
+        cell: ({ row }) => {
+          const s = row.original;
+          return (
+            <StatusSwitch
+              active={s.status === "active"}
+              label={`Toggle ${s.name}`}
+              disabled={!canUpdate}
+              pending={setStatus.isPending && setStatus.variables?.id === s.id}
+              onToggle={(on) => setStatus.mutate({ id: s.id, status: on ? "active" : "inactive" })}
+            />
+          );
+        },
+      },
+      {
+        id: "actions",
+        header: "",
+        meta: { className: "w-12 text-right" },
+        cell: ({ row }) => (
+          <RowActions
+            actions={[
+              { label: "Edit", icon: Pencil, onClick: () => editor.open(row.original), visible: canUpdate },
+              { label: "Delete", icon: Trash2, danger: true, onClick: () => remove(row.original), visible: can(P.SERVICE.DELETE) },
+            ]}
+          />
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [can, canUpdate, remove, setStatus.isPending, setStatus.variables],
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Services</h1>
-          <p className="text-muted-foreground text-sm">Manage your service catalog and pricing</p>
+    <>
+      <PageHeader
+        title="Services"
+        description="Your service catalog — prices are in BDT."
+        actions={
+          <Can permission={P.SERVICE.CREATE}>
+            <Button onClick={() => editor.open()}>
+              <Plus className="mr-2 h-4 w-4" /> New service
+            </Button>
+          </Can>
+        }
+      />
+
+      <DataTable
+        columns={columns}
+        query={query}
+        list={list}
+        emptyTitle="No services yet"
+        emptyDescription="Add categories and pet types first, then create your first service."
+        toolbar={
+          <DataTableToolbar
+            list={list}
+            searchPlaceholder="Search services…"
+            filters={
+              <>
+                <TableFilter list={list} param="categoryId" options={categories.data ?? []} allLabel="All categories" placeholder="Category" />
+                <TableFilter list={list} param="petTypeId" options={petTypes.data ?? []} allLabel="All pet types" placeholder="Pet type" />
+                <TableFilter list={list} param="status" options={STATUS_OPTIONS} allLabel="All statuses" placeholder="Status" />
+                <TableFilter list={list} param="isFeatured" options={FEATURED_OPTIONS} allLabel="Featured & regular" placeholder="Featured" />
+              </>
+            }
+          />
+        }
+      />
+
+      {loadingDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" role="status" aria-label="Loading service">
+          <Loader2 className="h-8 w-8 animate-spin text-primary-foreground" />
         </div>
-        <Button className="gap-2" onClick={() => { resetForm(); setShowAdd(true); }}><Plus className="w-4 h-4" /> Add Service</Button>
-      </div>
+      )}
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {services.map((s) => {
-          const Icon = iconMap[s.icon] || Scissors;
-          return (
-            <Card key={s.id} className={`border-border hover:shadow-md transition-shadow ${s.status === "Inactive" ? "opacity-60" : ""}`}>
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-accent-foreground" />
-                  </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditService({ ...s })}><Edit className="w-3 h-3" /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteTarget(s.id)}><Trash2 className="w-3 h-3" /></Button>
-                  </div>
-                </div>
-                <h3 className="font-display font-semibold text-card-foreground mt-3">{s.name}</h3>
-                <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                  <span className="font-bold text-primary text-lg">{s.price}</span>
-                  <span>·</span>
-                  <span>{s.duration}</span>
-                </div>
-                <div className="flex items-center justify-between mt-4 pt-3 border-t border-border text-xs text-muted-foreground">
-                  <span>{s.bookings} bookings</span>
-                  <div className="flex items-center gap-2">
-                    <Switch checked={s.status === "Active"} onCheckedChange={() => toggleStatus(s.id)} />
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.status === "Active" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>{s.status}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <FormModal
+        schema={schema}
+        size="lg"
+        {...editor.modalProps}
+        open={editor.modalProps.open && !loadingDetail}
+        defaultValues={toForm(editor.item ? detail.data ?? null : null)}
+      >
+        <FormSection title="Basics">
+          <TextField name="name" label="Name" placeholder="e.g. Full Grooming" required autoFocus />
+          <SelectField name="categoryId" label="Category" options={categories.data ?? []} numeric required placeholder="Choose a category" />
+          <TextField name="shortDescription" label="Short description" placeholder="One line shown on service cards" maxLength={255} />
+          <TextareaField name="description" label="Full description" rows={4} placeholder="What's included, what to bring…" />
+          <ImageUploadField name="image" label="Image" folder="services" />
+        </FormSection>
 
-      {/* Add Service Dialog */}
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Service</DialogTitle>
-            <DialogDescription>Create a new service for your catalog.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-2">
-            <div><Label>Service Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Dog Grooming" /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Price *</Label><Input value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="$40" /></div>
-              <div><Label>Duration *</Label><Input value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="60 min" /></div>
-            </div>
-            <div><Label>Icon</Label>
-              <Select value={form.icon} onValueChange={(v) => setForm({ ...form, icon: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.keys(iconMap).map((k) => <SelectItem key={k} value={k}>{k}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
-            <Button onClick={handleAdd}>Add Service</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <FormSection title="Price & time">
+          <FieldRow cols={3}>
+            <TextField name="price" label="Price" type="number" min={0} step="0.01" leading="৳" required />
+            <TextField name="discountPrice" label="Sale price" type="number" min={0} step="0.01" leading="৳" description="Optional" />
+            <TextField name="durationMinutes" label="Duration (min)" type="number" min={5} max={720} step={5} required />
+          </FieldRow>
+        </FormSection>
 
-      {/* Edit Service Dialog */}
-      <Dialog open={!!editService} onOpenChange={(o) => !o && setEditService(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Service</DialogTitle>
-            <DialogDescription>Update service details and pricing.</DialogDescription>
-          </DialogHeader>
-          {editService && (
-            <div className="grid gap-4 py-2">
-              <div><Label>Service Name</Label><Input value={editService.name} onChange={(e) => setEditService({ ...editService, name: e.target.value })} /></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Price</Label><Input value={editService.price} onChange={(e) => setEditService({ ...editService, price: e.target.value })} /></div>
-                <div><Label>Duration</Label><Input value={editService.duration} onChange={(e) => setEditService({ ...editService, duration: e.target.value })} /></div>
-              </div>
-              <div><Label>Icon</Label>
-                <Select value={editService.icon} onValueChange={(v) => setEditService({ ...editService, icon: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.keys(iconMap).map((k) => <SelectItem key={k} value={k}>{k}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditService(null)}>Cancel</Button>
-            <Button onClick={handleEdit}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <FormSection title="Who it's for">
+          <ChipsField name="petTypeIds" label="Pet types" options={petTypes.data ?? []} required />
+          <MultiSelectField
+            name="staffIds"
+            label="Staff who provide it"
+            options={staff.data ?? []}
+            placeholder="Assign staff"
+            searchPlaceholder="Search staff…"
+            description="Only these staff can be booked for this service."
+          />
+        </FormSection>
 
-      {/* Delete Confirmation */}
-      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Service</DialogTitle>
-            <DialogDescription>Are you sure? This will remove the service from your catalog.</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+        <FormSection title="Settings">
+          <FieldRow>
+            <TextField name="maxPetsPerBooking" label="Max pets per booking" type="number" min={1} max={10} />
+            <TextField name="sortOrder" label="Display order" type="number" min={0} description="Lower shows first." />
+          </FieldRow>
+          <SwitchField name="isFeatured" label="Featured" description="Highlight on the home page." />
+          <SwitchField name="requiresVaccination" label="Requires vaccination" description="Customers must confirm vaccinations when booking." />
+          <SelectField name="status" label="Status" options={STATUS_OPTIONS} />
+        </FormSection>
+      </FormModal>
+    </>
   );
 }

@@ -1,187 +1,352 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Tag, Calendar, Edit, Trash2, Power, PowerOff } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useMemo } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { Copy, Pencil, Plus, Shuffle, Trash2, Users } from "lucide-react";
+import { useFormContext, useWatch } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
+import { Can } from "@/components/common/Can";
+import { DataTable, DataTableToolbar, RowActions, TableFilter } from "@/components/common/data-table";
+import { MultiSelectField, SegmentedField } from "@/components/common/form/choice-fields";
+import { FieldRow, SelectField, TextareaField, TextField } from "@/components/common/form/fields";
+import { FormModal } from "@/components/common/form/FormModal";
+import { FormSection } from "@/components/common/form/FormSection";
+import { ImageUploadField } from "@/components/common/ImageUpload";
+import { Modal } from "@/components/common/Modal";
+import { PageHeader } from "@/components/common/PageHeader";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { StatusSwitch } from "@/components/common/StatusSwitch";
+import { UserCell } from "@/components/common/UserAvatar";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
+import { useCrudDelete, useCrudEditor } from "@/hooks/use-crud";
+import { useDisclosure } from "@/hooks/use-disclosure";
+import { useListParams } from "@/hooks/use-list-params";
+import { formatDate, formatDateTime, formatMoney, toDateTimeLocal } from "@/lib/format";
+import { PERMISSIONS as P } from "@/lib/permissions";
+import { STATUS_OPTIONS, useCategoryOptions, useServiceOptions } from "@/features/catalog/api";
+import {
+  DISCOUNT_TYPE_OPTIONS,
+  SCOPE_OPTIONS,
+  discountLabel,
+  promotionHooks,
+  promotionPhase,
+  usePromotionUsages,
+  type PromotionInput,
+} from "@/features/promotions/api";
+import type { Promotion, PromotionUsage } from "@/types/models";
 
-interface Promo {
-  id: string;
-  code: string;
-  discount: string;
-  desc: string;
-  expires: string;
-  uses: number;
-  status: "Active" | "Inactive" | "Expiring Soon";
+const optionalMoney = z.number().min(0).max(99_999_999).optional();
+
+const schema = z
+  .object({
+    title: z.string().trim().min(2, "At least 2 characters").max(150),
+    code: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^[A-Z0-9_-]{3,50}$/, "3–50 letters, numbers, - or _"),
+    description: z.string().trim().max(2000),
+    discountType: z.enum(["percentage", "fixed"]),
+    discountValue: z.number({ required_error: "Enter the discount", invalid_type_error: "Enter the discount" }).positive("Must be greater than 0"),
+    maxDiscountAmount: optionalMoney,
+    minOrderAmount: optionalMoney,
+    appliesTo: z.enum(["all", "specific_services", "specific_categories"]),
+    serviceIds: z.array(z.number()),
+    categoryIds: z.array(z.number()),
+    usageLimit: z.number().int().positive().optional(),
+    perUserLimit: z.number({ invalid_type_error: "Enter a number" }).int().min(1).max(100),
+    startsAt: z.string().min(1, "Start is required"),
+    endsAt: z.string().min(1, "End is required"),
+    bannerImage: z.string().url().nullable(),
+    status: z.enum(["active", "inactive"]),
+  })
+  .superRefine((v, ctx) => {
+    if (v.discountType === "percentage" && v.discountValue > 100) ctx.addIssue({ code: "custom", path: ["discountValue"], message: "Max 100%" });
+    if (v.startsAt && v.endsAt && v.endsAt <= v.startsAt) ctx.addIssue({ code: "custom", path: ["endsAt"], message: "Must be after the start" });
+    if (v.appliesTo === "specific_services" && !v.serviceIds.length) ctx.addIssue({ code: "custom", path: ["serviceIds"], message: "Select at least one service" });
+    if (v.appliesTo === "specific_categories" && !v.categoryIds.length) ctx.addIssue({ code: "custom", path: ["categoryIds"], message: "Select at least one category" });
+  });
+type Form = z.output<typeof schema>;
+
+const num = (v: string | null | undefined) => (v === null || v === undefined ? undefined : Number(v));
+
+function toForm(p: Promotion | null): z.input<typeof schema> {
+  const start = new Date();
+  start.setMinutes(0, 0, 0);
+  const end = new Date(start.getTime() + 7 * 864e5);
+  return {
+    title: p?.title ?? "",
+    code: p?.code ?? "",
+    description: p?.description ?? "",
+    discountType: p?.discountType ?? "percentage",
+    discountValue: num(p?.discountValue) as number,
+    maxDiscountAmount: num(p?.maxDiscountAmount),
+    minOrderAmount: num(p?.minOrderAmount),
+    appliesTo: p?.appliesTo ?? "all",
+    serviceIds: p?.services.map((s) => s.id) ?? [],
+    categoryIds: p?.categories.map((c) => c.id) ?? [],
+    usageLimit: p?.usageLimit ?? undefined,
+    perUserLimit: p?.perUserLimit ?? 1,
+    startsAt: toDateTimeLocal(p?.startsAt ?? start.toISOString()),
+    endsAt: toDateTimeLocal(p?.endsAt ?? end.toISOString()),
+    bannerImage: p?.bannerImage ?? null,
+    status: p?.status ?? "active",
+  };
 }
 
-const initialPromos: Promo[] = [
-  { id: "pr1", code: "SPRING10", discount: "10% OFF", desc: "Spring grooming special", expires: "2026-04-30", uses: 45, status: "Active" },
-  { id: "pr2", code: "NEWPET20", discount: "20% OFF", desc: "New customer first booking", expires: "2026-12-31", uses: 128, status: "Active" },
-  { id: "pr3", code: "SPADAY15", discount: "15% OFF", desc: "Premium spa treatment", expires: "2026-03-31", uses: 22, status: "Expiring Soon" },
-];
+const toInput = (v: Form): PromotionInput => ({
+  ...v,
+  description: v.description || null,
+  maxDiscountAmount: v.discountType === "percentage" ? v.maxDiscountAmount ?? null : null,
+  minOrderAmount: v.minOrderAmount ?? null,
+  usageLimit: v.usageLimit ?? null,
+  serviceIds: v.appliesTo === "specific_services" ? v.serviceIds : [],
+  categoryIds: v.appliesTo === "specific_categories" ? v.categoryIds : [],
+  // datetime-local is the admin's local time → send an absolute instant
+  startsAt: new Date(v.startsAt).toISOString(),
+  endsAt: new Date(v.endsAt).toISOString(),
+});
 
-let nextId = 4;
+const scopeLabel = (p: Promotion) =>
+  p.appliesTo === "all"
+    ? "All services"
+    : p.appliesTo === "specific_services"
+      ? `${p.services.length} service${p.services.length === 1 ? "" : "s"}`
+      : `${p.categories.length} categor${p.categories.length === 1 ? "y" : "ies"}`;
+
+const copy = (code: string) => navigator.clipboard.writeText(code).then(() => toast.success(`Copied ${code}`));
 
 export default function AdminPromotions() {
-  const [promos, setPromos] = useState<Promo[]>(initialPromos);
-  const [showAdd, setShowAdd] = useState(false);
-  const [editPromo, setEditPromo] = useState<Promo | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const { toast } = useToast();
+  const { can } = useAuth();
+  const list = useListParams({ defaults: { sortBy: "createdAt", sortOrder: "desc" } });
+  const query = promotionHooks.useList(list.params);
+  const services = useServiceOptions();
+  const categories = useCategoryOptions();
+  const usages = useDisclosure<Promotion>();
+  const update = promotionHooks.useUpdate();
+  const canUpdate = can(P.PROMOTION.UPDATE);
 
-  const [form, setForm] = useState({ code: "", discount: "", desc: "", expires: "" });
+  const editor = useCrudEditor<Promotion, Form, PromotionInput>({ hooks: promotionHooks, entity: "promotion", toForm, toInput });
+  const remove = useCrudDelete(promotionHooks, "promotion", (p: Promotion) => p.title);
 
-  const handleAdd = () => {
-    if (!form.code || !form.discount || !form.expires) {
-      toast({ title: "Missing fields", description: "Code, discount, and expiry are required.", variant: "destructive" });
-      return;
-    }
-    setPromos((prev) => [...prev, { id: `pr${nextId++}`, ...form, uses: 0, status: "Active" }]);
-    setShowAdd(false);
-    setForm({ code: "", discount: "", desc: "", expires: "" });
-    toast({ title: "Promo created", description: `${form.code} has been created.` });
-  };
-
-  const handleEdit = () => {
-    if (!editPromo) return;
-    setPromos((prev) => prev.map((p) => (p.id === editPromo.id ? editPromo : p)));
-    setEditPromo(null);
-    toast({ title: "Promo updated", description: `${editPromo.code} has been updated.` });
-  };
-
-  const handleDelete = () => {
-    if (!deleteTarget) return;
-    const promo = promos.find((p) => p.id === deleteTarget);
-    setPromos((prev) => prev.filter((p) => p.id !== deleteTarget));
-    setDeleteTarget(null);
-    toast({ title: "Promo deleted", description: `${promo?.code} has been removed.` });
-  };
-
-  const toggleStatus = (id: string) => {
-    setPromos((prev) => prev.map((p) => {
-      if (p.id !== id) return p;
-      return { ...p, status: p.status === "Active" || p.status === "Expiring Soon" ? "Inactive" as const : "Active" as const };
-    }));
-  };
-
-  const formatDate = (d: string) => {
-    try { return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
-    catch { return d; }
-  };
+  const columns = useMemo<ColumnDef<Promotion>[]>(
+    () => [
+      {
+        id: "title",
+        header: "Promotion",
+        enableSorting: true,
+        cell: ({ row }) => {
+          const p = row.original;
+          return (
+            <div className="min-w-[180px]">
+              <p className="font-medium">{p.title}</p>
+              {p.code && (
+                <button
+                  type="button"
+                  onClick={(e) => (e.stopPropagation(), copy(p.code!))}
+                  className="mt-1 inline-flex items-center gap-1 rounded border border-dashed border-primary/50 bg-primary/5 px-1.5 py-0.5 font-mono text-xs font-semibold text-primary hover:bg-primary/10"
+                  title="Copy code"
+                >
+                  {p.code} <Copy className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        id: "discount",
+        header: "Discount",
+        cell: ({ row }) => (
+          <div className="whitespace-nowrap">
+            <p className="font-semibold">{discountLabel(row.original)}</p>
+            {row.original.minOrderAmount && <p className="text-xs text-muted-foreground">Min. order {formatMoney(row.original.minOrderAmount)}</p>}
+          </div>
+        ),
+      },
+      { id: "appliesTo", header: "Applies to", cell: ({ row }) => scopeLabel(row.original) },
+      {
+        id: "startsAt",
+        header: "Validity",
+        enableSorting: true,
+        cell: ({ row }) => {
+          const phase = promotionPhase(row.original);
+          return (
+            <div className="space-y-1 whitespace-nowrap">
+              <StatusBadge status={phase.label} tone={phase.tone} />
+              <p className="text-xs text-muted-foreground">
+                {formatDate(row.original.startsAt, "d MMM")} – {formatDate(row.original.endsAt)}
+              </p>
+            </div>
+          );
+        },
+      },
+      {
+        id: "usage",
+        header: "Used",
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap">
+            {row.original.usedCount}
+            <span className="text-muted-foreground"> / {row.original.usageLimit ?? "∞"}</span>
+          </span>
+        ),
+      },
+      {
+        id: "status",
+        header: "Status",
+        cell: ({ row }) => (
+          <StatusSwitch
+            active={row.original.status === "active"}
+            label={`Toggle ${row.original.title}`}
+            disabled={!canUpdate}
+            pending={update.isPending && update.variables?.id === row.original.id}
+            onToggle={(on) => update.mutate({ id: row.original.id, data: { status: on ? "active" : "inactive" } })}
+          />
+        ),
+      },
+      {
+        id: "actions",
+        header: "",
+        meta: { className: "w-12 text-right" },
+        cell: ({ row }) => (
+          <RowActions
+            actions={[
+              { label: "Edit", icon: Pencil, onClick: () => editor.open(row.original), visible: canUpdate },
+              { label: "Who used it", icon: Users, onClick: () => usages.open(row.original) },
+              { label: "Delete", icon: Trash2, danger: true, onClick: () => remove(row.original), visible: can(P.PROMOTION.DELETE) },
+            ]}
+          />
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [can, canUpdate, remove, update.isPending, update.variables],
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Promotions</h1>
-          <p className="text-muted-foreground text-sm">Manage promo codes and discounts</p>
-        </div>
-        <Button className="gap-2" onClick={() => { setForm({ code: "", discount: "", desc: "", expires: "" }); setShowAdd(true); }}><Plus className="w-4 h-4" /> Create Promo</Button>
-      </div>
+    <>
+      <PageHeader
+        title="Promotions"
+        description="Promo codes customers enter at checkout."
+        actions={
+          <Can permission={P.PROMOTION.CREATE}>
+            <Button onClick={() => editor.open()}>
+              <Plus className="mr-2 h-4 w-4" /> New promotion
+            </Button>
+          </Can>
+        }
+      />
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {promos.map((p) => (
-          <Card key={p.id} className={`border-border ${p.status === "Inactive" ? "opacity-60" : ""}`}>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
-                    <Tag className="w-5 h-5 text-accent-foreground" />
-                  </div>
-                  <div>
-                    <p className="font-mono font-bold text-card-foreground">{p.code}</p>
-                    <p className="text-primary font-bold text-lg">{p.discount}</p>
-                  </div>
-                </div>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditPromo({ ...p })}><Edit className="w-3 h-3" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleStatus(p.id)} title={p.status === "Inactive" ? "Activate" : "Deactivate"}>
-                    {p.status === "Inactive" ? <Power className="w-3 h-3 text-success" /> : <PowerOff className="w-3 h-3 text-muted-foreground" />}
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteTarget(p.id)}><Trash2 className="w-3 h-3" /></Button>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground mt-3">{p.desc}</p>
-              <div className="flex items-center justify-between mt-4 pt-3 border-t border-border text-xs text-muted-foreground">
-                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />Expires {formatDate(p.expires)}</span>
-                <span>{p.uses} uses</span>
-              </div>
-              <div className="mt-2">
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                  p.status === "Active" ? "bg-success/10 text-success" :
-                  p.status === "Expiring Soon" ? "bg-warning/10 text-warning-foreground" :
-                  "bg-muted text-muted-foreground"
-                }`}>{p.status}</span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <DataTable
+        columns={columns}
+        query={query}
+        list={list}
+        emptyTitle="No promotions yet"
+        emptyDescription="Create a code like WELCOME10 to reward new customers."
+        toolbar={
+          <DataTableToolbar
+            list={list}
+            searchPlaceholder="Search title or code…"
+            filters={
+              <>
+                <TableFilter list={list} param="runningNow" options={[{ label: "Running now", value: "true" }]} allLabel="Any time" placeholder="When" />
+                <TableFilter list={list} param="discountType" options={DISCOUNT_TYPE_OPTIONS} allLabel="All types" placeholder="Type" />
+                <TableFilter list={list} param="appliesTo" options={SCOPE_OPTIONS} allLabel="Any scope" placeholder="Scope" />
+                <TableFilter list={list} param="status" options={STATUS_OPTIONS} allLabel="All statuses" placeholder="Status" />
+              </>
+            }
+          />
+        }
+      />
 
-      {/* Add Promo */}
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create Promotion</DialogTitle>
-            <DialogDescription>Create a new promo code.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-2">
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Code *</Label><Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="SPRING10" /></div>
-              <div><Label>Discount *</Label><Input value={form.discount} onChange={(e) => setForm({ ...form, discount: e.target.value })} placeholder="10% OFF" /></div>
-            </div>
-            <div><Label>Description</Label><Input value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder="Spring grooming special" /></div>
-            <div><Label>Expiry Date *</Label><Input type="date" value={form.expires} onChange={(e) => setForm({ ...form, expires: e.target.value })} /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
-            <Button onClick={handleAdd}>Create</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FormModal schema={schema} size="lg" {...editor.modalProps}>
+        <FormSection title="Basics">
+          <TextField name="title" label="Title" placeholder="e.g. Winter Grooming Week" required autoFocus />
+          <CodeField />
+          <TextareaField name="description" label="Description" rows={2} placeholder="Shown to customers on banners" />
+        </FormSection>
+        <FormSection title="Discount">
+          <SegmentedField name="discountType" label="Type" options={DISCOUNT_TYPE_OPTIONS} />
+          <DiscountFields />
+        </FormSection>
+        <FormSection title="Where it applies">
+          <SegmentedField name="appliesTo" label="Applies to" options={SCOPE_OPTIONS} />
+          <ScopeFields services={services.data ?? []} categories={categories.data ?? []} />
+        </FormSection>
+        <FormSection title="Limits & schedule">
+          <FieldRow>
+            <TextField name="startsAt" label="Starts" type="datetime-local" required />
+            <TextField name="endsAt" label="Ends" type="datetime-local" required />
+          </FieldRow>
+          <FieldRow>
+            <TextField name="usageLimit" label="Total uses" type="number" min={1} description="Empty = unlimited" />
+            <TextField name="perUserLimit" label="Uses per customer" type="number" min={1} max={100} />
+          </FieldRow>
+          <ImageUploadField name="bannerImage" label="Banner image" folder="promotions" description="Optional — used on the website banner." />
+          <SelectField name="status" label="Status" options={STATUS_OPTIONS} />
+        </FormSection>
+      </FormModal>
 
-      {/* Edit Promo */}
-      <Dialog open={!!editPromo} onOpenChange={(o) => !o && setEditPromo(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Promotion</DialogTitle>
-            <DialogDescription>Update promo code details.</DialogDescription>
-          </DialogHeader>
-          {editPromo && (
-            <div className="grid gap-4 py-2">
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Code</Label><Input value={editPromo.code} onChange={(e) => setEditPromo({ ...editPromo, code: e.target.value.toUpperCase() })} /></div>
-                <div><Label>Discount</Label><Input value={editPromo.discount} onChange={(e) => setEditPromo({ ...editPromo, discount: e.target.value })} /></div>
-              </div>
-              <div><Label>Description</Label><Input value={editPromo.desc} onChange={(e) => setEditPromo({ ...editPromo, desc: e.target.value })} /></div>
-              <div><Label>Expiry Date</Label><Input type="date" value={editPromo.expires} onChange={(e) => setEditPromo({ ...editPromo, expires: e.target.value })} /></div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditPromo(null)}>Cancel</Button>
-            <Button onClick={handleEdit}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UsagesModal promotion={usages.item} open={usages.isOpen} onOpenChange={usages.setOpen} />
+    </>
+  );
+}
 
-      {/* Delete Confirmation */}
-      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Promotion</DialogTitle>
-            <DialogDescription>Are you sure? This will remove the promo code.</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+function CodeField() {
+  const { setValue } = useFormContext<Form>();
+  const generate = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I confusion
+    const code = Array.from(crypto.getRandomValues(new Uint8Array(6)), (b) => chars[b % chars.length]).join("");
+    setValue("code", `PET${code}`, { shouldValidate: true, shouldDirty: true });
+  };
+  return (
+    <div className="flex items-start gap-2">
+      <TextField name="code" label="Code" placeholder="WINTER10" required className="flex-1" style={{ textTransform: "uppercase" }} />
+      <Button type="button" variant="outline" className="mt-8" onClick={generate}>
+        <Shuffle className="mr-1.5 h-4 w-4" /> Generate
+      </Button>
     </div>
+  );
+}
+
+function DiscountFields() {
+  const type = useWatch({ name: "discountType" });
+  const pct = type === "percentage";
+  return (
+    <FieldRow cols={3}>
+      <TextField name="discountValue" label={pct ? "Percent off" : "Amount off"} type="number" min={0} max={pct ? 100 : undefined} step="0.01" leading={pct ? "%" : "৳"} required />
+      {pct && <TextField name="maxDiscountAmount" label="Max discount" type="number" min={0} leading="৳" description="Optional cap" />}
+      <TextField name="minOrderAmount" label="Min. order" type="number" min={0} leading="৳" description="Optional" />
+    </FieldRow>
+  );
+}
+
+function ScopeFields({ services, categories }: { services: { value: number; label: React.ReactNode }[]; categories: { value: number; label: React.ReactNode }[] }) {
+  const scope = useWatch({ name: "appliesTo" });
+  if (scope === "specific_services")
+    return <MultiSelectField name="serviceIds" label="Services" options={services} placeholder="Choose services" searchPlaceholder="Search services…" required />;
+  if (scope === "specific_categories")
+    return <MultiSelectField name="categoryIds" label="Categories" options={categories} placeholder="Choose categories" searchPlaceholder="Search categories…" required />;
+  return null;
+}
+
+function UsagesModal({ promotion, open, onOpenChange }: { promotion: Promotion | null; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const list = useListParams({ syncUrl: false, defaults: { sortBy: "createdAt", sortOrder: "desc" } });
+  const query = usePromotionUsages(open ? promotion?.id ?? null : null, list.params);
+  const columns = useMemo<ColumnDef<PromotionUsage>[]>(
+    () => [
+      { id: "user", header: "Customer", cell: ({ row }) => <UserCell user={row.original.user} secondary={row.original.user.email} /> },
+      { id: "booking", header: "Booking", cell: ({ row }) => <span className="font-mono text-xs">{row.original.booking.bookingNo}</span> },
+      { id: "discountAmount", header: "Saved", cell: ({ row }) => formatMoney(row.original.discountAmount) },
+      { id: "createdAt", header: "When", cell: ({ row }) => formatDateTime(row.original.createdAt) },
+    ],
+    [],
+  );
+  return (
+    <Modal open={open} onOpenChange={onOpenChange} size="lg" title="Who used it" description={promotion ? `${promotion.title} · ${promotion.code}` : undefined}>
+      <DataTable columns={columns} query={query} list={list} emptyTitle="Not used yet" className="border-0" />
+    </Modal>
   );
 }

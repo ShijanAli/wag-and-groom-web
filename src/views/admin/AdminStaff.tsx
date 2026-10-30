@@ -1,195 +1,207 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Mail, Phone, Edit, Trash2, MoreHorizontal } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useMemo } from "react";
+import Link from "next/link";
+import type { ColumnDef } from "@tanstack/react-table";
+import { CalendarOff, CircleCheck, CirclePause, Clock, Pencil, Plus, Trash2 } from "lucide-react";
+import { z } from "zod";
+import { Can } from "@/components/common/Can";
+import { ChipList } from "@/components/common/Chip";
+import { useConfirm } from "@/components/common/ConfirmDialog";
+import { DataTable, DataTableToolbar, RowActions, TableFilter } from "@/components/common/data-table";
+import { FieldRow, PasswordField, TextField } from "@/components/common/form/fields";
+import { FormModal } from "@/components/common/form/FormModal";
+import { PageHeader } from "@/components/common/PageHeader";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { UserCell } from "@/components/common/UserAvatar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
+import { useDisclosure } from "@/hooks/use-disclosure";
+import { useListParams } from "@/hooks/use-list-params";
+import { useApiMutation } from "@/lib/api/hooks";
+import type { Id } from "@/lib/api/types";
+import { fullName } from "@/lib/auth";
+import { PERMISSIONS as P } from "@/lib/permissions";
+import { emailSchema, passwordSchema, phoneSchema } from "@/features/auth/schemas";
+import { useServiceOptions } from "@/features/catalog/api";
+import { ScheduleModal } from "@/features/staff/ScheduleModal";
+import { staffInvalidate, summarizeSchedule, useStaffList, useStaffRoleId } from "@/features/staff/api";
+import { usersApi } from "@/features/users/api";
+import type { StaffMember, UserStatus } from "@/types/models";
 
-interface StaffMember {
-  id: string;
-  name: string;
-  role: string;
-  email: string;
-  phone: string;
-  appointments: number;
-  status: "Active" | "Inactive";
-}
-
-const roles = ["Senior Groomer", "Groomer", "Dog Walker", "Pet Sitter", "Manager", "Receptionist"];
-
-const initialStaff: StaffMember[] = [
-  { id: "st1", name: "Jessica Martinez", role: "Senior Groomer", email: "jessica@happypaws.com", phone: "(555) 100-2000", appointments: 8, status: "Active" },
-  { id: "st2", name: "David Park", role: "Dog Walker", email: "david@happypaws.com", phone: "(555) 200-3000", appointments: 5, status: "Active" },
-  { id: "st3", name: "Lisa Thompson", role: "Pet Sitter", email: "lisa@happypaws.com", phone: "(555) 300-4000", appointments: 3, status: "Active" },
-  { id: "st4", name: "Ryan Cooper", role: "Manager", email: "ryan@happypaws.com", phone: "(555) 400-5000", appointments: 0, status: "Active" },
-];
-
-let nextId = 5;
+const profileFields = {
+  firstName: z.string().trim().min(1, "First name is required").max(100),
+  lastName: z.string().trim().min(1, "Last name is required").max(100),
+  phone: z.union([phoneSchema, z.literal("")]),
+};
+const createSchema = z.object({ ...profileFields, email: emailSchema, password: z.union([passwordSchema, z.literal("")]) });
+const editSchema = z.object(profileFields);
 
 export default function AdminStaff() {
-  const [staff, setStaff] = useState<StaffMember[]>(initialStaff);
-  const [showAdd, setShowAdd] = useState(false);
-  const [editMember, setEditMember] = useState<StaffMember | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const { toast } = useToast();
+  const { can } = useAuth();
+  const { confirm, confirmDelete } = useConfirm();
+  const list = useListParams({ defaults: { sortBy: "firstName", sortOrder: "asc" } });
+  const query = useStaffList(list.params);
+  const services = useServiceOptions();
+  const staffRoleId = useStaffRoleId();
 
-  const [form, setForm] = useState({ name: "", role: "Groomer", email: "", phone: "" });
+  const add = useDisclosure();
+  const edit = useDisclosure<StaffMember>();
+  const hours = useDisclosure<StaffMember>();
 
-  const handleAdd = () => {
-    if (!form.name || !form.email) {
-      toast({ title: "Missing fields", description: "Name and email are required.", variant: "destructive" });
-      return;
-    }
-    setStaff((prev) => [...prev, { id: `st${nextId++}`, ...form, appointments: 0, status: "Active" }]);
-    setShowAdd(false);
-    setForm({ name: "", role: "Groomer", email: "", phone: "" });
-    toast({ title: "Staff added", description: `${form.name} has been added to the team.` });
-  };
+  const opts = { invalidate: staffInvalidate };
+  const create = useApiMutation(usersApi.create, { ...opts, successMessage: "Staff member added" });
+  const update = useApiMutation(({ id, data }: { id: Id; data: Parameters<typeof usersApi.update>[1] }) => usersApi.update(id, data), opts);
+  const setStatus = useApiMutation(({ id, status }: { id: Id; status: UserStatus }) => usersApi.updateStatus(id, status), opts);
+  const remove = useApiMutation(usersApi.remove, opts);
+  const canManage = can(P.USER.UPDATE);
 
-  const handleEdit = () => {
-    if (!editMember) return;
-    setStaff((prev) => prev.map((s) => (s.id === editMember.id ? editMember : s)));
-    setEditMember(null);
-    toast({ title: "Staff updated", description: `${editMember.name} has been updated.` });
-  };
-
-  const handleDelete = () => {
-    if (!deleteTarget) return;
-    const member = staff.find((s) => s.id === deleteTarget);
-    setStaff((prev) => prev.filter((s) => s.id !== deleteTarget));
-    setDeleteTarget(null);
-    toast({ title: "Staff removed", description: `${member?.name} has been removed.` });
-  };
-
-  const toggleStatus = (id: string) => {
-    setStaff((prev) => prev.map((s) => (s.id === id ? { ...s, status: s.status === "Active" ? "Inactive" as const : "Active" as const } : s)));
-  };
+  const columns = useMemo<ColumnDef<StaffMember>[]>(
+    () => [
+      { id: "firstName", header: "Staff member", enableSorting: true, cell: ({ row }) => <UserCell user={row.original} secondary={row.original.email} /> },
+      { id: "phone", header: "Phone", cell: ({ row }) => row.original.phone ?? <span className="text-muted-foreground">—</span> },
+      {
+        id: "services",
+        header: "Services",
+        cell: ({ row }) => <ChipList items={row.original.services} max={2} empty="None assigned" />,
+      },
+      {
+        id: "hours",
+        header: "Working hours",
+        cell: ({ row }) => {
+          const lines = summarizeSchedule(row.original.schedules);
+          return lines.length ? (
+            <div className="space-y-0.5 text-xs">
+              {lines.map((l) => (
+                <p key={l} className="whitespace-nowrap">
+                  {l}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <span className="text-xs font-medium text-warning">Not set — can't be booked</span>
+          );
+        },
+      },
+      { id: "status", header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+      {
+        id: "actions",
+        header: "",
+        meta: { className: "w-12 text-right" },
+        cell: ({ row }) => {
+          const m = row.original;
+          const next = m.status === "active" ? "inactive" : "active";
+          return (
+            <RowActions
+              actions={[
+                { label: "Working hours", icon: Clock, onClick: () => hours.open(m), visible: can(P.STAFF_SCHEDULE.MANAGE) },
+                { label: "Edit details", icon: Pencil, onClick: () => edit.open(m), visible: canManage },
+                {
+                  label: next === "active" ? "Activate" : "Deactivate",
+                  icon: next === "active" ? CircleCheck : CirclePause,
+                  visible: canManage,
+                  onClick: () =>
+                    confirm({
+                      title: `${next === "active" ? "Activate" : "Deactivate"} ${fullName(m)}?`,
+                      description: next === "active" ? "They can sign in and be booked again." : "They can't sign in or be booked until reactivated.",
+                      confirmText: next === "active" ? "Activate" : "Deactivate",
+                      onConfirm: () => setStatus.mutateAsync({ id: m.id, status: next }),
+                    }),
+                },
+                {
+                  label: "Delete",
+                  icon: Trash2,
+                  danger: true,
+                  visible: can(P.USER.DELETE),
+                  onClick: () => confirmDelete({ entity: "staff member", name: fullName(m), onConfirm: () => remove.mutateAsync(m.id) }),
+                },
+              ]}
+            />
+          );
+        },
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [can, canManage, confirm, confirmDelete],
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Staff</h1>
-          <p className="text-muted-foreground text-sm">Manage team members and schedules</p>
-        </div>
-        <Button className="gap-2" onClick={() => { setForm({ name: "", role: "Groomer", email: "", phone: "" }); setShowAdd(true); }}><Plus className="w-4 h-4" /> Add Staff</Button>
-      </div>
+    <>
+      <PageHeader
+        title="Staff"
+        description="Groomers, walkers and sitters. Assign them to services from the Services page."
+        actions={
+          <>
+            <Can permission={P.BLOCKED_DATE.VIEW}>
+              <Button variant="outline" asChild>
+                <Link href="/admin/days-off">
+                  <CalendarOff className="mr-2 h-4 w-4" /> Holidays & days off
+                </Link>
+              </Button>
+            </Can>
+            <Can permission={P.USER.CREATE}>
+              <Button onClick={() => add.open()} disabled={!staffRoleId.data}>
+                <Plus className="mr-2 h-4 w-4" /> Add staff
+              </Button>
+            </Can>
+          </>
+        }
+      />
 
-      <div className="grid sm:grid-cols-2 gap-4">
-        {staff.map((s) => (
-          <Card key={s.id} className={`border-border ${s.status === "Inactive" ? "opacity-60" : ""}`}>
-            <CardContent className="p-5">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                  {s.name.split(" ").map(n => n[0]).join("")}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-card-foreground">{s.name}</h3>
-                      <Badge variant="secondary">{s.role}</Badge>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setEditMember({ ...s })}><Edit className="w-3 h-3 mr-2" />Edit</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(s.id)}><Trash2 className="w-3 h-3 mr-2" />Remove</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <div className="flex flex-col gap-1 mt-2 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{s.email}</span>
-                    <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{s.phone}</span>
-                  </div>
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-border text-xs">
-                    <span className="text-muted-foreground">{s.appointments} appointments today</span>
-                    <div className="flex items-center gap-2">
-                      <Switch checked={s.status === "Active"} onCheckedChange={() => toggleStatus(s.id)} />
-                      <span className={`px-2 py-0.5 rounded-full font-medium ${s.status === "Active" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>{s.status}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <DataTable
+        columns={columns}
+        query={query}
+        list={list}
+        emptyTitle="No staff yet"
+        emptyDescription="Add your team so customers can book them."
+        toolbar={
+          <DataTableToolbar
+            list={list}
+            searchPlaceholder="Search name, email or phone…"
+            filters={<TableFilter list={list} param="serviceId" options={services.data ?? []} allLabel="All services" placeholder="Service" />}
+          />
+        }
+      />
 
-      {/* Add Staff */}
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Staff Member</DialogTitle>
-            <DialogDescription>Add a new team member.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-2">
-            <div><Label>Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div><Label>Role</Label>
-              <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{roles.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div><Label>Email *</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-            <div><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
-            <Button onClick={handleAdd}>Add Staff</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FormModal
+        open={add.isOpen}
+        onOpenChange={add.setOpen}
+        title="Add staff member"
+        description="They'll sign in with this email. Leave the password empty to let them set one via “Forgot password”."
+        schema={createSchema}
+        defaultValues={{ firstName: "", lastName: "", email: "", phone: "", password: "" }}
+        submitText="Add staff"
+        onSubmit={(v) =>
+          create.mutateAsync({ ...v, phone: v.phone || undefined, password: v.password || undefined, roleId: staffRoleId.data!, status: "active" })
+        }
+      >
+        <FieldRow>
+          <TextField name="firstName" label="First name" required autoFocus />
+          <TextField name="lastName" label="Last name" required />
+        </FieldRow>
+        <TextField name="email" label="Email" type="email" required />
+        <TextField name="phone" label="Phone" type="tel" placeholder="+8801XXXXXXXXX" />
+        <PasswordField name="password" label="Password" autoComplete="new-password" description="Optional. 8+ characters with upper & lower case and a number." />
+      </FormModal>
 
-      {/* Edit Staff */}
-      <Dialog open={!!editMember} onOpenChange={(o) => !o && setEditMember(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Staff Member</DialogTitle>
-            <DialogDescription>Update team member details.</DialogDescription>
-          </DialogHeader>
-          {editMember && (
-            <div className="grid gap-4 py-2">
-              <div><Label>Name</Label><Input value={editMember.name} onChange={(e) => setEditMember({ ...editMember, name: e.target.value })} /></div>
-              <div><Label>Role</Label>
-                <Select value={editMember.role} onValueChange={(v) => setEditMember({ ...editMember, role: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{roles.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div><Label>Email</Label><Input type="email" value={editMember.email} onChange={(e) => setEditMember({ ...editMember, email: e.target.value })} /></div>
-              <div><Label>Phone</Label><Input value={editMember.phone} onChange={(e) => setEditMember({ ...editMember, phone: e.target.value })} /></div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditMember(null)}>Cancel</Button>
-            <Button onClick={handleEdit}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FormModal
+        open={edit.isOpen}
+        onOpenChange={edit.setOpen}
+        title="Edit staff member"
+        description={edit.item?.email}
+        schema={editSchema}
+        defaultValues={{ firstName: edit.item?.firstName ?? "", lastName: edit.item?.lastName ?? "", phone: edit.item?.phone ?? "" }}
+        submitText="Save changes"
+        onSubmit={(v) => update.mutateAsync({ id: edit.item!.id, data: { ...v, phone: v.phone || null } })}
+      >
+        <FieldRow>
+          <TextField name="firstName" label="First name" required />
+          <TextField name="lastName" label="Last name" required />
+        </FieldRow>
+        <TextField name="phone" label="Phone" type="tel" />
+      </FormModal>
 
-      {/* Delete Confirmation */}
-      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Remove Staff Member</DialogTitle>
-            <DialogDescription>Are you sure? This action cannot be undone.</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete}>Remove</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+      <ScheduleModal staff={hours.item} open={hours.isOpen} onOpenChange={hours.setOpen} />
+    </>
   );
 }

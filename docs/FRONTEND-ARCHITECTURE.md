@@ -47,6 +47,27 @@ src/
 
 ## Recipe: a new CRUD admin page
 
+The shortest version uses `useCrudEditor` (one modal for create and edit) and `useCrudDelete`:
+
+```tsx
+const editor = useCrudEditor<PetType, Form, PetTypeInput>({ hooks: petTypeHooks, entity: "pet type", toForm, toInput });
+const remove = useCrudDelete(petTypeHooks, "pet type", (t) => t.name);
+
+<Button onClick={() => editor.open()}>New pet type</Button>          // create
+{ label: "Edit", onClick: () => editor.open(row) }                  // edit
+{ label: "Delete", danger: true, onClick: () => remove(row) }       // confirm + delete
+<FormModal schema={schema} {...editor.modalProps}>…fields…</FormModal>
+```
+
+Field set:
+
+- `TextField`, `PasswordField`, `TextareaField`, `SelectField`, `SwitchField`, `CheckboxField` (in `fields.tsx`)
+- `ChipsField`, `MultiSelectField` (searchable), `SegmentedField`, `DateField` (in `choice-fields.tsx`)
+- `ImageUploadField`
+- Layout helpers: `FieldRow` and `FormSection`
+
+The manual version:
+
 ```ts
 // features/services/api.ts
 export const servicesApi = createResource<Service, ServiceInput>("/services");

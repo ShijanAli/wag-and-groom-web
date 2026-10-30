@@ -29,3 +29,6 @@ dist-ssr
 # env (keep .env.example committed)
 .env
 .env*.local
+
+# TypeScript incremental build cache
+*.tsbuildinfo

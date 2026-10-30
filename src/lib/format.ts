@@ -8,22 +8,23 @@ import { format, formatDistanceToNowStrict, isValid, parse, parseISO } from "dat
 export type Currency = "BDT" | "USD";
 
 const moneyFormatters = new Map<string, Intl.NumberFormat>();
+const CURRENCY_SYMBOL: Record<Currency, string> = { BDT: "৳", USD: "$" };
 
+/** "1500" → "৳1,500" · "150000.5" → "৳1,50,000.50" (BDT uses lakh grouping) · USD → "$1,500" */
 export function formatMoney(value: string | number | null | undefined, currency: Currency = "BDT"): string {
   if (value === null || value === undefined || value === "") return "—";
   const n = typeof value === "number" ? value : Number(value);
   if (Number.isNaN(n)) return "—";
-  let f = moneyFormatters.get(currency);
+  const key = `${currency}:${n % 1 === 0}`;
+  let f = moneyFormatters.get(key);
   if (!f) {
-    f = new Intl.NumberFormat(currency === "BDT" ? "en-BD" : "en-US", {
-      style: "currency",
-      currency,
+    f = new Intl.NumberFormat(currency === "BDT" ? "en-IN" : "en-US", {
       minimumFractionDigits: n % 1 === 0 ? 0 : 2,
       maximumFractionDigits: 2,
     });
-    moneyFormatters.set(currency, f);
+    moneyFormatters.set(key, f);
   }
-  return f.format(n);
+  return `${n < 0 ? "-" : ""}${CURRENCY_SYMBOL[currency]}${f.format(Math.abs(n))}`;
 }
 
 const toDate = (v: string | Date) => (typeof v === "string" ? parseISO(v) : v);
@@ -59,3 +60,15 @@ export function formatDuration(minutes: number | null | undefined): string {
 
 /** Date → "YYYY-MM-DD" in local time (what the API expects for booking dates). */
 export const toApiDate = (d: Date) => format(d, "yyyy-MM-dd");
+
+/**
+ * Date-only values (`@db.Date`, e.g. blocked dates) arrive as "2026-11-05T00:00:00.000Z".
+ * Format the calendar day itself — never shift it through the browser's timezone.
+ */
+export function formatDay(value: string | null | undefined, pattern = "EEE, d MMM yyyy"): string {
+  if (!value) return "—";
+  return formatDate(parse(value.slice(0, 10), "yyyy-MM-dd", new Date()), pattern);
+}
+
+/** ISO → value for <input type="datetime-local"> in the user's local time. */
+export const toDateTimeLocal = (iso: string | null | undefined) => (iso ? format(parseISO(iso), "yyyy-MM-dd'T'HH:mm") : "");

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, X } from "lucide-react";
+import { Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -51,7 +51,8 @@ export function TableFilter({
   param: string;
   options: Option<string | number>[];
   placeholder?: string;
-  allLabel?: string;
+  /** `false` = no "All" entry (the filter always has a value, usually from `defaults`). */
+  allLabel?: string | false;
   className?: string;
 }) {
   const value = list.params[param];
@@ -61,7 +62,7 @@ export function TableFilter({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all">{allLabel}</SelectItem>
+        {allLabel !== false && <SelectItem value="all">{allLabel}</SelectItem>}
         {options.map((o) => (
           <SelectItem key={String(o.value)} value={String(o.value)}>
             {o.label}
@@ -89,12 +90,23 @@ export function DataTableToolbar({
   /** Params that are part of the page (e.g. a fixed role filter) and shouldn't count as "filtered". */
   defaults?: Record<string, unknown>;
 }) {
-  const filtered = Object.entries(list.params).some(([k, v]) => !CONTROL_KEYS.has(k) && v !== undefined && v !== "" && defaults[k] !== v);
+  const [showFilters, setShowFilters] = useState(false);
+  const active = Object.entries(list.params).filter(([k, v]) => !CONTROL_KEYS.has(k) && k !== "searchTerm" && v !== undefined && v !== "" && defaults[k] !== v).length;
+  const filtered = active > 0 || !!list.params.searchTerm;
   return (
     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        <TableSearch list={list} placeholder={searchPlaceholder} />
-        {filters}
+        <div className="flex gap-2">
+          <TableSearch list={list} placeholder={searchPlaceholder} />
+          {/* phones: filters collapse behind one button */}
+          {filters && (
+            <Button variant="outline" size="sm" className="h-9 shrink-0 sm:hidden" onClick={() => setShowFilters((s) => !s)} aria-expanded={showFilters}>
+              <SlidersHorizontal className="mr-1.5 h-4 w-4" />
+              Filters{active ? ` (${active})` : ""}
+            </Button>
+          )}
+        </div>
+        {filters && <div className={cn("flex-col gap-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center", showFilters ? "flex" : "hidden")}>{filters}</div>}
         {filtered && (
           <Button variant="ghost" size="sm" onClick={list.reset} className="h-9 text-muted-foreground">
             <X className="mr-1 h-4 w-4" /> Clear

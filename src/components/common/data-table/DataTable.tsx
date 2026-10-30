@@ -99,7 +99,7 @@ export function DataTable<T>({
                         <button
                           type="button"
                           onClick={() => toggleSort(key)}
-                          className={cn("-ml-1 inline-flex items-center gap-1 rounded px-1 py-0.5 hover:text-foreground", active && "text-foreground")}
+                          className={cn("-ml-1 inline-flex items-center gap-1 rounded px-1 py-0.5 uppercase tracking-wide hover:text-foreground", active && "text-foreground")}
                         >
                           {label}
                           {active ? (

@@ -1,5 +1,8 @@
 import {
   CalendarDays,
+  CalendarOff,
+  FolderTree,
+  PawPrint,
   Image,
   LayoutDashboard,
   Scissors,
@@ -37,6 +40,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     items: [
       { title: "Dashboard", url: "/admin", icon: LayoutDashboard, anyOf: [P.DASHBOARD.VIEW], keywords: ["home", "overview", "stats"] },
       { title: "Bookings", url: "/admin/bookings", icon: CalendarDays, anyOf: [P.BOOKING.VIEW], keywords: ["appointments", "schedule"] },
+      { title: "Customers", url: "/admin/customers", icon: Users, anyOf: [P.USER.VIEW], keywords: ["clients", "users"] },
+    ],
+  },
+  {
+    label: "Catalog",
+    items: [
       {
         title: "Services",
         url: "/admin/services",
@@ -44,13 +53,27 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         anyOf: [P.SERVICE.CREATE, P.SERVICE.UPDATE, P.SERVICE.DELETE],
         keywords: ["catalog", "pricing"],
       },
-      { title: "Customers", url: "/admin/customers", icon: Users, anyOf: [P.USER.VIEW], keywords: ["clients", "users"] },
+      {
+        title: "Categories",
+        url: "/admin/service-categories",
+        icon: FolderTree,
+        anyOf: [P.SERVICE_CATEGORY.CREATE, P.SERVICE_CATEGORY.UPDATE, P.SERVICE_CATEGORY.DELETE],
+        keywords: ["service categories", "groups"],
+      },
+      { title: "Pet Types", url: "/admin/pet-types", icon: PawPrint, anyOf: [P.PET_TYPE.CREATE, P.PET_TYPE.UPDATE, P.PET_TYPE.DELETE], keywords: ["animals", "species", "dog", "cat"] },
+      { title: "Promotions", url: "/admin/promotions", icon: Tag, anyOf: [P.PROMOTION.VIEW], keywords: ["promo", "discount", "coupon"] },
     ],
   },
   {
-    label: "Manage",
+    label: "Team",
     items: [
-      { title: "Staff", url: "/admin/staff", icon: UserCog, anyOf: [P.STAFF_SCHEDULE.VIEW], keywords: ["team", "employees"] },
+      { title: "Staff", url: "/admin/staff", icon: UserCog, anyOf: [P.STAFF_SCHEDULE.VIEW], keywords: ["team", "employees", "working hours"] },
+      { title: "Days Off", url: "/admin/days-off", icon: CalendarOff, anyOf: [P.BLOCKED_DATE.VIEW], keywords: ["holidays", "leave", "closed", "blocked dates"] },
+    ],
+  },
+  {
+    label: "Content",
+    items: [
       { title: "Reviews", url: "/admin/reviews", icon: Star, anyOf: [P.REVIEW.VIEW], keywords: ["ratings", "feedback"] },
       {
         title: "Gallery",
@@ -59,7 +82,6 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         anyOf: [P.GALLERY.CREATE, P.GALLERY.UPDATE, P.GALLERY.DELETE],
         keywords: ["photos", "images"],
       },
-      { title: "Promotions", url: "/admin/promotions", icon: Tag, anyOf: [P.PROMOTION.VIEW], keywords: ["promo", "discount", "coupon"] },
     ],
   },
   {
