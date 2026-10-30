@@ -1,230 +1,196 @@
 "use client";
 
-import { useState } from "react";
-import { Search, Users, Mail, Phone, MoreHorizontal, Plus, Edit, Trash2, Eye } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { useMemo } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { BadgeCheck, Ban, CircleCheck, CirclePause, Eye, Pencil, Trash2 } from "lucide-react";
+import { z } from "zod";
+import { DataTable, DataTableToolbar, RowActions, TableFilter } from "@/components/common/data-table";
+import { DetailList } from "@/components/common/DetailList";
+import { FieldRow, TextField, TextareaField } from "@/components/common/form/fields";
+import { FormModal } from "@/components/common/form/FormModal";
+import { Modal } from "@/components/common/Modal";
+import { PageHeader } from "@/components/common/PageHeader";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { UserCell } from "@/components/common/UserAvatar";
+import { useConfirm } from "@/components/common/ConfirmDialog";
+import { useAuth } from "@/context/AuthContext";
+import { useDisclosure } from "@/hooks/use-disclosure";
+import { useListParams } from "@/hooks/use-list-params";
+import { fullName } from "@/lib/auth";
+import { formatDate, formatDateTime, timeAgo } from "@/lib/format";
+import { PERMISSIONS as P } from "@/lib/permissions";
+import { phoneSchema } from "@/features/auth/schemas";
+import { USER_STATUS_OPTIONS, useUpdateUserStatus, userHooks } from "@/features/users/api";
+import type { User, UserStatus } from "@/types/models";
 
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  pets: number;
-  bookings: number;
-  spent: string;
-}
+const editSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required").max(100),
+  lastName: z.string().trim().min(1, "Last name is required").max(100),
+  phone: z.union([phoneSchema, z.literal("")]),
+  address: z.string().trim().max(255),
+});
 
-const initialCustomers: Customer[] = [
-  { id: "c1", name: "Sarah Johnson", email: "sarah@email.com", phone: "(555) 111-2233", pets: 2, bookings: 12, spent: "$480" },
-  { id: "c2", name: "Mike Chen", email: "mike@email.com", phone: "(555) 222-3344", pets: 1, bookings: 8, spent: "$320" },
-  { id: "c3", name: "Emily Davis", email: "emily@email.com", phone: "(555) 333-4455", pets: 3, bookings: 15, spent: "$600" },
-  { id: "c4", name: "James Kim", email: "james@email.com", phone: "(555) 444-5566", pets: 1, bookings: 5, spent: "$150" },
-  { id: "c5", name: "Anna Lee", email: "anna@email.com", phone: "(555) 555-6677", pets: 2, bookings: 10, spent: "$400" },
+const VERIFIED_OPTIONS = [
+  { label: "Verified", value: "true" },
+  { label: "Not verified", value: "false" },
 ];
 
-let nextId = 6;
+const STATUS_ACTIONS: { status: UserStatus; label: string; icon: typeof Ban; danger?: boolean }[] = [
+  { status: "active", label: "Activate", icon: CircleCheck },
+  { status: "inactive", label: "Deactivate", icon: CirclePause },
+  { status: "blocked", label: "Block", icon: Ban, danger: true },
+];
 
 export default function AdminCustomers() {
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
-  const [search, setSearch] = useState("");
-  const [showAdd, setShowAdd] = useState(false);
-  const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
-  const [viewCustomer, setViewCustomer] = useState<Customer | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const { toast } = useToast();
+  const { can } = useAuth();
+  const { confirm, confirmDelete } = useConfirm();
+  const list = useListParams({ defaults: { sortBy: "createdAt", sortOrder: "desc" } });
+  // role is fixed for this page → sent to the API but never shown in the URL
+  const query = userHooks.useList({ ...list.params, role: "customer" });
+  const view = useDisclosure<User>();
+  const edit = useDisclosure<User>();
+  const update = userHooks.useUpdate();
+  const remove = userHooks.useRemove();
+  const setStatus = useUpdateUserStatus();
 
-  const [form, setForm] = useState({ name: "", email: "", phone: "" });
-
-  const filtered = customers.filter((c) =>
-    !search || [c.name, c.email, c.phone].some((f) => f.toLowerCase().includes(search.toLowerCase()))
+  const columns = useMemo<ColumnDef<User>[]>(
+    () => [
+      {
+        id: "firstName",
+        header: "Customer",
+        enableSorting: true,
+        cell: ({ row }) => (
+          <UserCell
+            user={row.original}
+            secondary={
+              <span className="inline-flex items-center gap-1">
+                {row.original.email}
+                {row.original.emailVerifiedAt && <BadgeCheck className="h-3.5 w-3.5 text-success" aria-label="Verified" />}
+              </span>
+            }
+          />
+        ),
+      },
+      { id: "phone", header: "Phone", cell: ({ row }) => row.original.phone ?? <span className="text-muted-foreground">—</span> },
+      { id: "status", header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+      { id: "createdAt", header: "Joined", enableSorting: true, cell: ({ row }) => formatDate(row.original.createdAt) },
+      {
+        id: "lastLoginAt",
+        header: "Last seen",
+        enableSorting: true,
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.lastLoginAt ? timeAgo(row.original.lastLoginAt) : "Never"}</span>,
+      },
+      {
+        id: "actions",
+        header: "",
+        meta: { className: "w-12 text-right" },
+        cell: ({ row }) => {
+          const u = row.original;
+          return (
+            <RowActions
+              actions={[
+                { label: "View", icon: Eye, onClick: () => view.open(u) },
+                { label: "Edit", icon: Pencil, onClick: () => edit.open(u), visible: can(P.USER.UPDATE) },
+                ...STATUS_ACTIONS.filter((a) => a.status !== u.status).map((a) => ({
+                  label: a.label,
+                  icon: a.icon,
+                  danger: a.danger,
+                  visible: can(P.USER.UPDATE),
+                  onClick: () =>
+                    confirm({
+                      title: `${a.label} ${fullName(u)}?`,
+                      description:
+                        a.status === "active" ? "They will be able to sign in and book again." : "They will be signed out and can't sign in until reactivated.",
+                      confirmText: a.label,
+                      tone: a.danger ? "danger" : "default",
+                      onConfirm: () => setStatus.mutateAsync({ id: u.id, status: a.status }),
+                    }),
+                })),
+                {
+                  label: "Delete",
+                  icon: Trash2,
+                  danger: true,
+                  visible: can(P.USER.DELETE),
+                  onClick: () => confirmDelete({ entity: "customer", name: fullName(u), onConfirm: () => remove.mutateAsync(u.id) }),
+                },
+              ]}
+            />
+          );
+        },
+      },
+    ],
+    // mutation objects change every render; their mutateAsync is stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [can, confirm, confirmDelete],
   );
 
-  const handleAdd = () => {
-    if (!form.name || !form.email) {
-      toast({ title: "Missing fields", description: "Name and email are required.", variant: "destructive" });
-      return;
-    }
-    setCustomers((prev) => [...prev, { id: `c${nextId++}`, ...form, pets: 0, bookings: 0, spent: "$0" }]);
-    setShowAdd(false);
-    setForm({ name: "", email: "", phone: "" });
-    toast({ title: "Customer added", description: `${form.name} has been added.` });
-  };
-
-  const handleEdit = () => {
-    if (!editCustomer) return;
-    setCustomers((prev) => prev.map((c) => (c.id === editCustomer.id ? editCustomer : c)));
-    setEditCustomer(null);
-    toast({ title: "Customer updated", description: `${editCustomer.name} has been updated.` });
-  };
-
-  const handleDelete = () => {
-    if (!deleteTarget) return;
-    const cust = customers.find((c) => c.id === deleteTarget);
-    setCustomers((prev) => prev.filter((c) => c.id !== deleteTarget));
-    setDeleteTarget(null);
-    toast({ title: "Customer deleted", description: `${cust?.name} has been removed.` });
-  };
+  const total = query.data?.meta.total;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Customers</h1>
-          <p className="text-muted-foreground text-sm">Manage customer accounts and pet profiles</p>
-        </div>
-        <Button className="gap-2" onClick={() => { setForm({ name: "", email: "", phone: "" }); setShowAdd(true); }}><Plus className="w-4 h-4" /> Add Customer</Button>
-      </div>
+    <>
+      <PageHeader title="Customers" description={total !== undefined ? `${total} registered customer${total === 1 ? "" : "s"}` : "Registered customer accounts"} />
 
-      <Card className="border-border">
-        <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-card-foreground font-display">All Customers ({filtered.length})</CardTitle>
-          <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
-            <Search className="w-4 h-4 text-muted-foreground" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search customers..."
-              className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground w-40"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-2 text-muted-foreground font-medium">Name</th>
-                  <th className="text-left py-3 px-2 text-muted-foreground font-medium">Contact</th>
-                  <th className="text-left py-3 px-2 text-muted-foreground font-medium">Pets</th>
-                  <th className="text-left py-3 px-2 text-muted-foreground font-medium">Bookings</th>
-                  <th className="text-left py-3 px-2 text-muted-foreground font-medium">Total Spent</th>
-                  <th className="text-left py-3 px-2 text-muted-foreground font-medium"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 && (
-                  <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">No customers found</td></tr>
-                )}
-                {filtered.map((c) => (
-                  <tr key={c.id} className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
-                    <td className="py-3 px-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                          {c.name.split(" ").map(n => n[0]).join("")}
-                        </div>
-                        <span className="font-medium text-card-foreground">{c.name}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-2">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3" />{c.email}</span>
-                        <span className="text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3" />{c.phone}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-2 text-card-foreground">{c.pets}</td>
-                    <td className="py-3 px-2 text-card-foreground">{c.bookings}</td>
-                    <td className="py-3 px-2 font-medium text-card-foreground">{c.spent}</td>
-                    <td className="py-3 px-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon"><MoreHorizontal className="w-4 h-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setViewCustomer(c)}><Eye className="w-3 h-3 mr-2" />View</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setEditCustomer({ ...c })}><Edit className="w-3 h-3 mr-2" />Edit</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(c.id)}><Trash2 className="w-3 h-3 mr-2" />Delete</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      <DataTable
+        columns={columns}
+        query={query}
+        list={list}
+        onRowClick={view.open}
+        emptyTitle="No customers yet"
+        emptyDescription="Customers appear here as soon as they sign up on the website."
+        toolbar={
+          <DataTableToolbar
+            list={list}
+            searchPlaceholder="Search name, email or phone…"
+            filters={
+              <>
+                <TableFilter list={list} param="status" options={USER_STATUS_OPTIONS} allLabel="All statuses" placeholder="Status" />
+                <TableFilter list={list} param="isVerified" options={VERIFIED_OPTIONS} allLabel="Any verification" placeholder="Verification" />
+              </>
+            }
+          />
+        }
+      />
 
-      {/* Add Customer */}
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Customer</DialogTitle>
-            <DialogDescription>Add a new customer to the system.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-2">
-            <div><Label>Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div><Label>Email *</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-            <div><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
-            <Button onClick={handleAdd}>Add Customer</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Modal open={view.isOpen} onOpenChange={view.setOpen} title={view.item ? fullName(view.item) : "Customer"} description={view.item?.email}>
+        {view.item && (
+          <DetailList
+            items={[
+              { label: "Status", value: <StatusBadge status={view.item.status} /> },
+              { label: "Email verified", value: view.item.emailVerifiedAt ? formatDateTime(view.item.emailVerifiedAt) : "Not yet" },
+              { label: "Phone", value: view.item.phone },
+              { label: "Joined", value: formatDateTime(view.item.createdAt) },
+              { label: "Last sign-in", value: view.item.lastLoginAt ? formatDateTime(view.item.lastLoginAt) : "Never" },
+              { label: "Address", value: view.item.address, full: true },
+              { label: "Bio", value: view.item.bio, full: true },
+            ]}
+          />
+        )}
+      </Modal>
 
-      {/* Edit Customer */}
-      <Dialog open={!!editCustomer} onOpenChange={(o) => !o && setEditCustomer(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Customer</DialogTitle>
-            <DialogDescription>Update customer information.</DialogDescription>
-          </DialogHeader>
-          {editCustomer && (
-            <div className="grid gap-4 py-2">
-              <div><Label>Name</Label><Input value={editCustomer.name} onChange={(e) => setEditCustomer({ ...editCustomer, name: e.target.value })} /></div>
-              <div><Label>Email</Label><Input type="email" value={editCustomer.email} onChange={(e) => setEditCustomer({ ...editCustomer, email: e.target.value })} /></div>
-              <div><Label>Phone</Label><Input value={editCustomer.phone} onChange={(e) => setEditCustomer({ ...editCustomer, phone: e.target.value })} /></div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditCustomer(null)}>Cancel</Button>
-            <Button onClick={handleEdit}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Customer */}
-      <Dialog open={!!viewCustomer} onOpenChange={(o) => !o && setViewCustomer(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{viewCustomer?.name}</DialogTitle>
-            <DialogDescription>Customer details</DialogDescription>
-          </DialogHeader>
-          {viewCustomer && (
-            <div className="grid gap-3 py-2 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span className="text-card-foreground">{viewCustomer.email}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Phone</span><span className="text-card-foreground">{viewCustomer.phone}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Pets</span><span className="text-card-foreground">{viewCustomer.pets}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Total Bookings</span><span className="text-card-foreground">{viewCustomer.bookings}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Total Spent</span><span className="font-bold text-card-foreground">{viewCustomer.spent}</span></div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setViewCustomer(null)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation */}
-      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Customer</DialogTitle>
-            <DialogDescription>Are you sure? This will remove the customer and their data.</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+      <FormModal
+        open={edit.isOpen}
+        onOpenChange={edit.setOpen}
+        title="Edit customer"
+        description={edit.item?.email}
+        schema={editSchema}
+        defaultValues={{
+          firstName: edit.item?.firstName ?? "",
+          lastName: edit.item?.lastName ?? "",
+          phone: edit.item?.phone ?? "",
+          address: edit.item?.address ?? "",
+        }}
+        onSubmit={(v) =>
+          update.mutateAsync({ id: edit.item!.id, data: { ...v, phone: v.phone || null, address: v.address || null } })
+        }
+        submitText="Save changes"
+      >
+        <FieldRow>
+          <TextField name="firstName" label="First name" required />
+          <TextField name="lastName" label="Last name" required />
+        </FieldRow>
+        <TextField name="phone" label="Phone" type="tel" placeholder="+8801XXXXXXXXX" />
+        <TextareaField name="address" label="Address" rows={2} />
+      </FormModal>
+    </>
   );
 }

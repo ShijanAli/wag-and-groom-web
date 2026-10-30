@@ -5,7 +5,7 @@ import { SITE } from "@/lib/site";
 
 const title = "Pet Grooming, Walking, Sitting & Spa Services and Prices";
 const description =
-  "Explore HappyPaws services and prices in San Francisco: dog grooming from $40, dog walking from $20, pet sitting, daycare and luxury pet spa. Certified groomers, pet-safe products, free cancellation. Book online.";
+  "Explore PetPlex services and prices in San Francisco: dog grooming from $40, dog walking from $20, pet sitting, daycare and luxury pet spa. Certified groomers, pet-safe products, free cancellation. Book online.";
 const ogImage = "/images/service-grooming.jpg";
 
 export const metadata: Metadata = {
@@ -46,7 +46,7 @@ const jsonLd = {
     },
     {
       "@type": "ItemList",
-      name: "HappyPaws pet care services",
+      name: "PetPlex pet care services",
       itemListElement: SERVICES.map((s, i) => ({
         "@type": "ListItem",
         position: i + 1,

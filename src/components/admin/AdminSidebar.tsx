@@ -1,87 +1,81 @@
 "use client";
 
-import { Dog, LayoutDashboard, CalendarDays, Scissors, Users, UserCog, Star, Image, Tag, ChevronLeft, Shield, User } from "lucide-react";
-import { NavLink } from "@/components/NavLink";
+import { useMemo } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-
-const mainItems = [
-  { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
-  { title: "Bookings", url: "/admin/bookings", icon: CalendarDays },
-  { title: "Services", url: "/admin/services", icon: Scissors },
-  { title: "Customers", url: "/admin/customers", icon: Users },
-];
-
-const manageItems = [
-  { title: "Staff", url: "/admin/staff", icon: UserCog },
-  { title: "Reviews", url: "/admin/reviews", icon: Star },
-  { title: "Gallery", url: "/admin/gallery", icon: Image },
-  { title: "Promotions", url: "/admin/promotions", icon: Tag },
-];
-
-const systemItems = [
-  { title: "Roles & Permissions", url: "/admin/roles", icon: Shield },
-  { title: "Profile", url: "/admin/profile", icon: User },
-];
+import { Logo } from "@/components/common/Logo";
+import { useAuth } from "@/context/AuthContext";
+import { ADMIN_NAV, findNavItem } from "@/lib/admin-nav";
+import { cn } from "@/lib/utils";
 
 export function AdminSidebar() {
-  const { state, toggleSidebar } = useSidebar();
-  const collapsed = state === "collapsed";
+  const { state, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
+  const collapsed = state === "collapsed" && !isMobile;
   const pathname = usePathname();
-  const isActive = (path: string) => pathname === path;
+  const { canAny } = useAuth();
+  const activeUrl = findNavItem(pathname)?.url;
 
-  const renderGroup = (label: string, items: typeof mainItems) => (
-    <SidebarGroup>
-      <SidebarGroupLabel className="text-sidebar-foreground/50">{label}</SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                <NavLink href={item.url} end className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                  <item.icon className="mr-2 h-4 w-4" />
-                  {!collapsed && <span>{item.title}</span>}
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
+  // Only groups/items the user may open — empty groups disappear entirely.
+  const groups = useMemo(
+    () => ADMIN_NAV.map((g) => ({ ...g, items: g.items.filter((i) => canAny(i.anyOf)) })).filter((g) => g.items.length > 0),
+    [canAny],
   );
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      <div className="flex items-center gap-2 h-16 px-4 border-b border-sidebar-border">
-        <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center shrink-0">
-          <Dog className="w-4 h-4 text-sidebar-primary-foreground" />
-        </div>
-        {!collapsed && <span className="font-display text-lg font-bold text-sidebar-foreground">HappyPaws</span>}
+      <div className="flex h-16 items-center border-b border-sidebar-border px-3">
+        <Logo href="/admin" variant="sidebar" collapsed={collapsed} />
       </div>
 
-      <SidebarContent className="pt-4">
-        {renderGroup("Main", mainItems)}
-        {renderGroup("Manage", manageItems)}
-        {renderGroup("System", systemItems)}
+      <SidebarContent className="pt-2">
+        {groups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel className="text-sidebar-foreground/50">{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => {
+                  const active = item.url === activeUrl;
+                  return (
+                    <SidebarMenuItem key={item.url}>
+                      <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
+                        <Link
+                          href={item.url}
+                          onClick={() => isMobile && setOpenMobile(false)}
+                          className={cn("hover:bg-sidebar-accent", active && "bg-sidebar-accent font-medium text-sidebar-primary")}
+                        >
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-2">
         <button
+          type="button"
           onClick={toggleSidebar}
-          className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors text-sm"
+          className="flex w-full items-center justify-center gap-2 rounded-lg py-2 text-sm text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
         >
-          <ChevronLeft className={`w-4 h-4 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
+          <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
           {!collapsed && <span>Collapse</span>}
         </button>
       </SidebarFooter>

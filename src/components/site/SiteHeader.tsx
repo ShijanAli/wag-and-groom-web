@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, LogOut, Menu, PawPrint, X } from "lucide-react";
-import { useAuth, roleHomePath } from "@/context/AuthContext";
+import { usePathname } from "next/navigation";
+import { LayoutDashboard, Menu, X } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { homePathFor } from "@/lib/auth";
+import { Logo } from "@/components/common/Logo";
+import { UserMenu } from "@/components/common/UserMenu";
 import { Button } from "@/components/ui/button";
 
 interface Props {
@@ -43,12 +46,7 @@ export function SiteHeader({ onBook }: Props) {
   return (
     <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled || menuOpen ? "bg-background/90 backdrop-blur-xl border-b border-border shadow-sm" : "bg-transparent"}`}>
       <nav aria-label="Main" className="container mx-auto flex items-center justify-between h-[72px] px-4">
-        <Link href="/" className="flex items-center gap-2.5" aria-label="HappyPaws home">
-          <span className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
-            <PawPrint className="w-5 h-5 text-primary-foreground" />
-          </span>
-          <span className="font-display text-xl font-bold tracking-tight">HappyPaws</span>
-        </Link>
+        <Logo />
         <ul className="hidden lg:flex items-center gap-7">
           {navLinks.map((l) => (
             <li key={l.label}>
@@ -78,26 +76,36 @@ export function SiteHeader({ onBook }: Props) {
 }
 
 function AuthNavActions({ onBook }: { onBook: () => void }) {
-  const { user, logout } = useAuth();
-  const router = useRouter();
+  const { user, status } = useAuth();
+  // Avoid a "Sign in" → avatar flash while the session restores
+  if (status === "loading") return <div className="h-9 w-40" aria-hidden />;
   if (user) {
     return (
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="ghost" size="sm" className="rounded-full" asChild>
-          <Link href={roleHomePath[user.role]}><LayoutDashboard className="w-4 h-4 mr-1.5" />My dashboard</Link>
+          <Link href={homePathFor(user)}>
+            <LayoutDashboard className="mr-1.5 h-4 w-4" />
+            Dashboard
+          </Link>
         </Button>
-        <Button variant="ghost" size="sm" className="rounded-full" onClick={() => { logout(); router.push("/"); }}>
-          <LogOut className="w-4 h-4 mr-1.5" />Sign out
+        <Button size="sm" className="rounded-full px-5" onClick={onBook}>
+          Book now
         </Button>
-        <Button size="sm" className="rounded-full px-5" onClick={onBook}>Book now</Button>
+        <UserMenu />
       </div>
     );
   }
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button variant="ghost" size="sm" className="rounded-full" asChild><Link href="/login">Sign in</Link></Button>
-      <Button variant="outline" size="sm" className="rounded-full bg-card/60" asChild><Link href="/register">Sign up</Link></Button>
-      <Button size="sm" className="rounded-full px-5 shadow-md shadow-primary/30" onClick={onBook}>Book now</Button>
+      <Button variant="ghost" size="sm" className="rounded-full" asChild>
+        <Link href="/login">Sign in</Link>
+      </Button>
+      <Button variant="outline" size="sm" className="rounded-full bg-card/60" asChild>
+        <Link href="/register">Sign up</Link>
+      </Button>
+      <Button size="sm" className="rounded-full px-5 shadow-md shadow-primary/30" onClick={onBook}>
+        Book now
+      </Button>
     </div>
   );
 }

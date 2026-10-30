@@ -1,5 +1,8 @@
 "use client";
 
+import { NotificationBell } from "@/components/common/NotificationBell";
+import { UserMenu } from "@/components/common/UserMenu";
+
 import { useState } from "react";
 import { Dog, Clock, CheckCircle2, Play, Camera, Upload, Calendar, User, FileText, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -94,12 +97,9 @@ export default function StaffDashboard() {
               <p className="text-xs text-muted-foreground">{todayDate}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <User className="w-4 h-4" />
-              <span className="hidden sm:inline">Jessica Martinez</span>
-            </div>
-            <Badge variant="secondary" className="text-xs">Senior Groomer</Badge>
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <UserMenu />
           </div>
         </div>
       </header>

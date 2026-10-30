@@ -72,7 +72,7 @@ export default function ServicesPage() {
                   Premium care for <span className="text-primary">every pet</span>
                 </h1>
                 <p className="text-lg text-muted-foreground max-w-xl leading-relaxed">
-                  From a quick walk to a full luxury spa day, explore everything HappyPaws offers. Transparent prices, gentle hands and easy online booking.
+                  From a quick walk to a full luxury spa day, explore everything PetPlex offers. Transparent prices, gentle hands and easy online booking.
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <Button size="lg" className="h-14 px-8 rounded-full text-base gap-2 shadow-xl shadow-primary/30 hover:-translate-y-0.5 transition-transform" onClick={() => openBooking()}>
@@ -92,7 +92,7 @@ export default function ServicesPage() {
               <motion.div initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, delay: 0.15 }} className="relative max-w-xl mx-auto w-full">
                 <div className="absolute -inset-4 rounded-[3rem] bg-gradient-to-br from-primary/30 to-secondary/20 blur-2xl -z-10" />
                 <div className="relative aspect-[5/4] rounded-[2.5rem] overflow-hidden shadow-2xl shadow-foreground/15 ring-1 ring-border">
-                  <Image src="/images/hero-grooming.jpg" alt="Golden retriever enjoying a bath with a HappyPaws groomer" fill priority sizes="(max-width: 1024px) 90vw, 520px" className="object-cover object-[65%_50%]" />
+                  <Image src="/images/hero-grooming.jpg" alt="Golden retriever enjoying a bath with a PetPlex groomer" fill priority sizes="(max-width: 1024px) 90vw, 520px" className="object-cover object-[65%_50%]" />
                 </div>
                 <div className="absolute -bottom-6 -left-4 sm:-left-8 w-36 h-36 sm:w-44 sm:h-44 rounded-3xl overflow-hidden border-4 border-background shadow-xl">
                   <Image src="/images/service-spa.jpg" alt="Relaxed cat after a spa treatment" fill sizes="180px" className="object-cover" />
@@ -178,7 +178,7 @@ export default function ServicesPage() {
           <div className="container mx-auto px-4">
             <motion.div {...reveal} custom={0} className="max-w-2xl mx-auto text-center mb-12">
               <span className="text-primary font-semibold text-sm uppercase tracking-[0.2em]">Included with every visit</span>
-              <h2 className="font-display text-3xl md:text-5xl font-bold mt-3">The HappyPaws promise</h2>
+              <h2 className="font-display text-3xl md:text-5xl font-bold mt-3">The PetPlex promise</h2>
             </motion.div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {guarantees.map((g, i) => (

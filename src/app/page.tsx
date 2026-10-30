@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     siteName: SITE.name,
     title: `${SITE.name} | ${title}`,
     description: SITE.description,
-    images: [{ url: ogImage, width: 1400, height: 933, alt: "Happy golden retriever being washed by a HappyPaws groomer" }],
+    images: [{ url: ogImage, width: 1400, height: 933, alt: "Happy golden retriever being washed by a PetPlex groomer" }],
   },
   twitter: {
     card: "summary_large_image",

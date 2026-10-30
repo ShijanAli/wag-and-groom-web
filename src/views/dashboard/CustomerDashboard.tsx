@@ -1,5 +1,8 @@
 "use client";
 
+import { NotificationBell } from "@/components/common/NotificationBell";
+import { UserMenu } from "@/components/common/UserMenu";
+
 import { useState } from "react";
 import Link from "next/link";
 import { Dog, CalendarDays, CreditCard, PawPrint, Plus, Edit, Trash2, X as XIcon, Clock, MoreHorizontal, RotateCcw, Check } from "lucide-react";
@@ -112,14 +115,18 @@ export default function CustomerDashboard() {
             <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
               <Dog className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="font-display text-xl font-bold text-foreground">HappyPaws</span>
+            <span className="font-display text-xl font-bold text-foreground">PetPlex</span>
           </Link>
           <div className="hidden md:flex items-center gap-8">
             <Link href="/" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Home</Link>
             <Link href="/services" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Services</Link>
             <Link href="/dashboard" className="text-sm font-medium text-foreground transition-colors">Dashboard</Link>
           </div>
-          <Button size="sm" onClick={() => setBookingModalOpen(true)}>Book Now</Button>
+          <div className="flex items-center gap-1">
+            <Button size="sm" className="mr-1" onClick={() => setBookingModalOpen(true)}>Book Now</Button>
+            <NotificationBell />
+            <UserMenu />
+          </div>
         </div>
       </nav>
 

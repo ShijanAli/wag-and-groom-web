@@ -15,7 +15,7 @@ export function SiteFooter() {
           <div className="space-y-4">
             <div className="flex items-center gap-2.5">
               <span className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center"><PawPrint className="w-5 h-5 text-primary-foreground" /></span>
-              <span className="font-display text-xl font-bold">HappyPaws</span>
+              <span className="font-display text-xl font-bold">PetPlex</span>
             </div>
             <p className="text-background/60 text-sm max-w-xs leading-relaxed">Professional grooming, spa, walking and sitting for dogs and cats in San Francisco.</p>
           </div>
@@ -31,7 +31,7 @@ export function SiteFooter() {
           ))}
         </div>
         <div className="mt-12 pt-6 border-t border-background/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-background/50">
-          <p>© {new Date().getFullYear()} HappyPaws. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} PetPlex. All rights reserved.</p>
           <p className="flex items-center gap-1.5">Made with <Heart className="w-3.5 h-3.5 fill-primary text-primary" /> for pets everywhere</p>
         </div>
       </div>

@@ -3,7 +3,7 @@ import StaffDashboard from "@/views/staff/StaffDashboard";
 
 export default function Page() {
   return (
-    <ProtectedRoute allowedRoles={["staff"]}>
+    <ProtectedRoute area="staff">
       <StaffDashboard />
     </ProtectedRoute>
   );

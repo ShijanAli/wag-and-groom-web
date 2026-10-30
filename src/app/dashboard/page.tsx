@@ -3,7 +3,7 @@ import CustomerDashboard from "@/views/dashboard/CustomerDashboard";
 
 export default function Page() {
   return (
-    <ProtectedRoute allowedRoles={["customer"]}>
+    <ProtectedRoute area="customer">
       <CustomerDashboard />
     </ProtectedRoute>
   );

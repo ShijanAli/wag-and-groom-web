@@ -1,12 +1,12 @@
 export const SITE = {
-  name: "HappyPaws",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.happypaws.com",
+  name: "PetPlex",
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.petplex.com",
   tagline: "Professional Pet Grooming, Walking, Sitting & Spa",
   description:
-    "HappyPaws offers professional dog grooming, pet spa, dog walking, pet sitting and daycare in San Francisco. Certified, gentle groomers. Book your pet's appointment online in 60 seconds.",
+    "PetPlex offers professional dog grooming, pet spa, dog walking, pet sitting and daycare in San Francisco. Certified, gentle groomers. Book your pet's appointment online in 60 seconds.",
   phone: "(555) 123-4567",
   phoneHref: "+15551234567",
-  email: "hello@happypaws.com",
+  email: "hello@petplex.com",
   address: { street: "123 Pet Avenue", city: "San Francisco", region: "CA", country: "US" },
   hours: [
     { label: "Mon–Sat", value: "8AM–7PM" },
@@ -33,7 +33,7 @@ export const FAQS = [
   },
   {
     q: "Are your groomers trained and certified?",
-    a: "Yes. Every HappyPaws groomer is professionally certified, trained in pet first aid and experienced in handling nervous or senior pets with patience.",
+    a: "Yes. Every PetPlex groomer is professionally certified, trained in pet first aid and experienced in handling nervous or senior pets with patience.",
   },
   {
     q: "Which pets do you accept?",

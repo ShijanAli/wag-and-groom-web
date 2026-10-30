@@ -41,7 +41,7 @@ const gallery = [
 ];
 
 const testimonials = [
-  { name: "Sarah Johnson", pet: "Buddy · Golden Retriever", text: "HappyPaws transformed Buddy! The grooming was exceptional and the staff were incredibly caring. He came home smelling amazing and wagging non-stop." },
+  { name: "Sarah Johnson", pet: "Buddy · Golden Retriever", text: "PetPlex transformed Buddy! The grooming was exceptional and the staff were incredibly caring. He came home smelling amazing and wagging non-stop." },
   { name: "Mike Chen", pet: "Whiskers · Persian Cat", text: "Best pet spa in town! Whiskers came home looking like a show cat. Booking took under a minute and the team kept me updated the whole time." },
   { name: "Emily Davis", pet: "Max · Labrador", text: "The dog walking service is fantastic. Max is always happy and perfectly tired after his walks. I trust them completely with my best friend." },
 ];
@@ -120,7 +120,7 @@ const Index = () => {
             <motion.div initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, delay: 0.15 }} className="relative mx-auto w-full max-w-xl lg:max-w-none">
               <div className="absolute -inset-4 rounded-[3rem] bg-gradient-to-br from-primary/30 to-secondary/20 blur-2xl -z-10" />
               <div className="relative aspect-[4/4.4] rounded-[2.5rem] overflow-hidden shadow-2xl shadow-foreground/15 ring-1 ring-border">
-                <Image src="/images/hero-grooming.jpg" alt="Happy golden retriever being washed by a HappyPaws groomer" fill priority sizes="(max-width: 1024px) 90vw, 560px" className="object-cover object-[65%_50%]" />
+                <Image src="/images/hero-grooming.jpg" alt="Happy golden retriever being washed by a PetPlex groomer" fill priority sizes="(max-width: 1024px) 90vw, 560px" className="object-cover object-[65%_50%]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-foreground/30 via-transparent to-transparent" />
               </div>
 
@@ -206,7 +206,7 @@ const Index = () => {
               </div>
             </motion.div>
             <motion.div {...reveal} custom={1} className="space-y-6">
-              <span className="text-primary font-semibold text-sm uppercase tracking-[0.2em]">Why HappyPaws</span>
+              <span className="text-primary font-semibold text-sm uppercase tracking-[0.2em]">Why PetPlex</span>
               <h2 className="font-display text-3xl md:text-5xl font-bold leading-tight">Care that feels like family, done with professional skill</h2>
               <p className="text-muted-foreground text-lg leading-relaxed">
                 We&apos;re a team of certified groomers and animal lovers who believe a trip to the groomer should be the highlight of your pet&apos;s week, not a stressful chore.

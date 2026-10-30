@@ -1,55 +1,83 @@
-"use client";
-
-import Link from "next/link";
-import { Dog } from "lucide-react";
+import { CalendarCheck, HeartHandshake, ShieldCheck } from "lucide-react";
+import { Logo } from "@/components/common/Logo";
+import { SITE } from "@/lib/site";
 
 interface Props {
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
 }
 
+const HIGHLIGHTS = [
+  { icon: CalendarCheck, text: "Book grooming, walking & spa in under a minute" },
+  { icon: HeartHandshake, text: "Adopt a pet and follow every step of the process" },
+  { icon: ShieldCheck, text: "Secure payments with SSLCommerz" },
+];
+
 export function AuthLayout({ title, subtitle, children, footer }: Props) {
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-background">
-      {/* Brand panel */}
-      <div className="hidden lg:flex flex-col justify-between p-10 bg-gradient-to-br from-primary to-primary/70 text-primary-foreground relative overflow-hidden">
-        <Link href="/" className="flex items-center gap-2 relative z-10">
-          <div className="w-10 h-10 rounded-full bg-primary-foreground/20 backdrop-blur flex items-center justify-center">
-            <Dog className="w-5 h-5" />
-          </div>
-          <span className="font-display text-2xl font-bold">HappyPaws</span>
-        </Link>
-        <div className="relative z-10 space-y-3 max-w-md">
+    <div className="grid min-h-screen bg-background lg:grid-cols-2">
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-primary to-primary/70 p-10 text-primary-foreground lg:flex">
+        <Logo variant="light" className="relative z-10" />
+        <div className="relative z-10 max-w-md space-y-6">
           <h2 className="font-display text-4xl font-bold leading-tight">Care your pets deserve, scheduled in seconds.</h2>
-          <p className="text-primary-foreground/80">
-            Manage bookings, pets, staff and operations — all from one beautiful dashboard tailored to your role.
-          </p>
+          <ul className="space-y-3">
+            {HIGHLIGHTS.map(({ icon: Icon, text }) => (
+              <li key={text} className="flex items-center gap-3 text-primary-foreground/90">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-foreground/15">
+                  <Icon className="h-4 w-4" />
+                </span>
+                {text}
+              </li>
+            ))}
+          </ul>
         </div>
-        <div className="text-xs text-primary-foreground/60 relative z-10">© {new Date().getFullYear()} HappyPaws. All rights reserved.</div>
-        {/* decorative blobs */}
-        <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-primary-foreground/10 blur-3xl" />
-        <div className="absolute -bottom-20 -left-20 w-96 h-96 rounded-full bg-primary-foreground/10 blur-3xl" />
-      </div>
+        <p className="relative z-10 text-xs text-primary-foreground/60">
+          © {new Date().getFullYear()} {SITE.name}. All rights reserved.
+        </p>
+        <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-primary-foreground/10 blur-3xl" />
+        <div className="absolute -bottom-20 -left-20 h-96 w-96 rounded-full bg-primary-foreground/10 blur-3xl" />
+      </aside>
 
-      {/* Form panel */}
-      <div className="flex items-center justify-center p-6 sm:p-10">
+      <main className="flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-md space-y-6">
-          <Link href="/" className="lg:hidden flex items-center gap-2 mb-4">
-            <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
-              <Dog className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-display text-xl font-bold text-foreground">HappyPaws</span>
-          </Link>
+          <Logo className="mb-4 lg:hidden" />
           <div className="space-y-2">
             <h1 className="font-display text-3xl font-bold text-foreground">{title}</h1>
-            {subtitle && <p className="text-muted-foreground text-sm">{subtitle}</p>}
+            {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
           </div>
           {children}
           {footer && <div className="text-center text-sm text-muted-foreground">{footer}</div>}
         </div>
+      </main>
+    </div>
+  );
+}
+
+/** Success / error screen used by verify-email, forgot / reset password and post-register. */
+export function AuthResult({
+  icon,
+  tone = "primary",
+  title,
+  children,
+  actions,
+}: {
+  icon: React.ReactNode;
+  tone?: "primary" | "success" | "danger";
+  title: string;
+  children?: React.ReactNode;
+  actions?: React.ReactNode;
+}) {
+  const toneCls = { primary: "bg-primary/10 text-primary", success: "bg-success/15 text-success", danger: "bg-destructive/10 text-destructive" }[tone];
+  return (
+    <div className="space-y-5 rounded-2xl border bg-card p-6 text-center shadow-sm">
+      <span className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${toneCls}`}>{icon}</span>
+      <div className="space-y-2">
+        <h2 className="font-display text-xl font-bold">{title}</h2>
+        {children && <div className="text-sm text-muted-foreground">{children}</div>}
       </div>
+      {actions && <div className="flex flex-col gap-2">{actions}</div>}
     </div>
   );
 }
