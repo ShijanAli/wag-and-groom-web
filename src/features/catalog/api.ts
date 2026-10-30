@@ -64,6 +64,7 @@ export const serviceHooks = createResourceHooks("services", servicesApi);
 
 export const useServiceStatus = () =>
   useApiMutation(({ id, status }: { id: Id; status: ActiveStatus }) => servicesApi.updateStatus(id, status), {
+    revalidate: ["services"],
     invalidate: [serviceHooks.keys.all],
   });
 

@@ -27,6 +27,7 @@ const hint = {
 
 let accessToken: string | null = null;
 const expiredListeners = new Set<() => void>();
+const accessChangedListeners = new Set<() => void>();
 
 export const tokenStore = {
   get: () => accessToken,
@@ -40,7 +41,19 @@ export const tokenStore = {
     expiredListeners.add(fn);
     return () => void expiredListeners.delete(fn);
   },
+  /**
+   * Called when the API says this session's access changed under it (permission removed,
+   * role deactivated, account blocked). The backend checks role + permissions on every
+   * request, so the UI just has to re-sync `/auth/me` to catch up.
+   */
+  onAccessChanged(fn: () => void) {
+    accessChangedListeners.add(fn);
+    return () => void accessChangedListeners.delete(fn);
+  },
 };
+
+/** 403 messages from the auth middleware that mean "your access is not what the UI thinks". */
+const ACCESS_CHANGED = /^(Missing permission|Your role is currently inactive|Your account is )/;
 
 /* ─────────────────────────── axios instances ─────────────────────────── */
 
@@ -88,6 +101,11 @@ http.interceptors.response.use(
   (res) => res,
   async (error: AxiosError) => {
     const original = error.config as RetryConfig | undefined;
+    if (error.response?.status === 403) {
+      const message = (error.response.data as Partial<ApiResponse<unknown>> | undefined)?.message ?? "";
+      if (ACCESS_CHANGED.test(message)) accessChangedListeners.forEach((fn) => fn());
+      return Promise.reject(error);
+    }
     const skip = !original || original._retried || NO_REFRESH_ROUTES.some((p) => original.url?.startsWith(p));
     if (error.response?.status !== 401 || skip) return Promise.reject(error);
 

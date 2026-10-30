@@ -11,6 +11,8 @@ import {
 import { toast } from "sonner";
 import { getErrorMessage, getFieldErrors } from "./errors";
 import type { Resource } from "./request";
+import { resourceOf, type CacheResource } from "./cache-tags";
+import { revalidateSite } from "./revalidate-site";
 import type { ApiResponse, Id, ListParams, Paginated } from "./types";
 
 interface MutationConfig<TData, TVars> {
@@ -21,6 +23,8 @@ interface MutationConfig<TData, TVars> {
   /** Default true. Validation errors with field details are never toasted — forms show them inline. */
   errorToast?: boolean;
   onSuccess?: (data: TData, vars: TVars) => void;
+  /** Public pages that show this data → their cache is refreshed right after the write. */
+  revalidate?: readonly CacheResource[];
 }
 
 /**
@@ -29,13 +33,14 @@ interface MutationConfig<TData, TVars> {
  */
 export function useApiMutation<TData = unknown, TVars = void>(
   mutationFn: (vars: TVars) => Promise<ApiResponse<TData>>,
-  { invalidate, successMessage, errorToast = true, onSuccess }: MutationConfig<ApiResponse<TData>, TVars> = {},
+  { invalidate, successMessage, errorToast = true, onSuccess, revalidate }: MutationConfig<ApiResponse<TData>, TVars> = {},
 ) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn,
     onSuccess: async (res, vars) => {
       await Promise.all((invalidate ?? []).map((queryKey) => qc.invalidateQueries({ queryKey })));
+      if (revalidate) revalidateSite(revalidate);
       const msg = typeof successMessage === "function" ? successMessage(res, vars) : successMessage ?? res.message;
       if (msg) toast.success(msg);
       onSuccess?.(res, vars);
@@ -67,6 +72,9 @@ export const createKeys = (scope: string) => ({
 export function createResourceHooks<T, TCreate, TUpdate>(scope: string, resource: Resource<T, TCreate, TUpdate>) {
   const keys = createKeys(scope);
   const invalidate = [keys.all];
+  // writes to public resources (services, blog, faqs …) refresh the website's cached pages
+  const site = resourceOf(resource.path);
+  const revalidate = site ? [site] : undefined;
 
   return {
     keys,
@@ -85,10 +93,10 @@ export function createResourceHooks<T, TCreate, TUpdate>(scope: string, resource
         ...options,
       }),
     useCreate: (config?: MutationConfig<ApiResponse<T>, TCreate>) =>
-      useApiMutation((body: TCreate) => resource.create(body), { invalidate, ...config }),
+      useApiMutation((body: TCreate) => resource.create(body), { invalidate, revalidate, ...config }),
     useUpdate: (config?: MutationConfig<ApiResponse<T>, { id: Id; data: TUpdate }>) =>
-      useApiMutation(({ id, data }: { id: Id; data: TUpdate }) => resource.update(id, data), { invalidate, ...config }),
+      useApiMutation(({ id, data }: { id: Id; data: TUpdate }) => resource.update(id, data), { invalidate, revalidate, ...config }),
     useRemove: (config?: MutationConfig<ApiResponse<null>, Id>) =>
-      useApiMutation((id: Id) => resource.remove(id), { invalidate, ...config }),
+      useApiMutation((id: Id) => resource.remove(id), { invalidate, revalidate, ...config }),
   };
 }

@@ -29,7 +29,8 @@ export default function GalleryPage({ albums, album, initial }: GalleryPageProps
     queryFn: ({ pageParam }) => api.list<GalleryItem>("/gallery/items", { album, page: pageParam, limit: GALLERY_PAGE_SIZE }),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.meta.page < last.meta.totalPages ? last.meta.page + 1 : undefined),
-    ...(initial && { initialData: { pages: [initial], pageParams: [1] } }),
+    // server page may be a few minutes old (ISR) → render it, then refresh in the background
+    ...(initial && { initialData: { pages: [initial], pageParams: [1] }, initialDataUpdatedAt: 0 }),
     staleTime: 5 * 60_000,
   });
   const items = query.data?.pages.flatMap((p) => p.data) ?? [];

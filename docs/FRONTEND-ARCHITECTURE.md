@@ -190,3 +190,14 @@ What you get with no extra code:
 **Charts** (`features/system/RevenueChart.tsx`): two-series stacked bars using `--viz-1` / `--viz-2` (validated with the dataviz palette checker for light and dark surfaces), legend always shown, tooltip with both values + net, and a Table toggle as the accessible fallback.
 
 **Shared pieces added**: `StatCard`, `useUserStatusActions` + `userProfileFields` / `userCreateFields` (now used by Customers, Staff and Users), `CustomerDetailModal`, `NotificationsCenter`, `PromoBanner`.
+
+## Freshness: access changes and public-page cache
+
+**Access changes apply without a reload.** The API loads the user's role and permissions on every request, so changes are enforced server-side immediately. The UI catches up through `AuthContext.syncAccess()` (single-flight `/auth/me`):
+- when any request gets a 403 from the auth middleware ("Missing permission", "Your role is currently inactive", "Your account is …") — the API client emits `tokenStore.onAccessChanged`;
+- when the user returns to the tab (at most every 15 s).
+If role/permissions differ, cached queries are invalidated and a toast explains it; the sidebar, route guard and buttons update because they all read `user.permissions`. A blocked/deactivated account is signed out with the API's message. `ProtectedRoute` moves a user to the right panel if their role changed area (e.g. staff → customer).
+
+**Admin edits show on the website right away.** Server reads in `lib/api/server.ts` are tagged per resource (`api:blog`, `api:services`, …). Mutations on public resources call `revalidateSite()` (batched, fire-and-forget) → `POST /api/revalidate` (Next route handler) → `revalidateTag`. The handler verifies the bearer token against `/auth/me` and only accepts users with at least one permission (customers/guests get 401/403). `createResourceHooks` derives the resource from its path automatically; custom mutations pass `revalidate: [...]`. ISR timers remain as a fallback.
+
+Client lists seeded with ISR data (`/adopt`, `/gallery`, review summaries) use `initialDataUpdatedAt: 0`, so they render instantly and refresh in the background.

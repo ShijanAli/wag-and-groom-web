@@ -28,6 +28,9 @@ export interface AdoptionPetInput {
   images?: { imageUrl: string; isPrimary?: boolean }[];
 }
 
+/** pet status / photos show on /adopt and the home page */
+const ADOPT_SITE = ["adoption-pets"] as const;
+
 export const adoptionPetsApi = {
   ...createResource<AdoptionPet, AdoptionPetInput>("/adoption-pets"),
   setStatus: (id: Id, status: "available" | "on_hold") => api.patch<AdoptionPet>(`/adoption-pets/${id}/status`, { status }),
@@ -39,13 +42,13 @@ export const adoptionPetHooks = createResourceHooks("adoption-pets", adoptionPet
 const petInvalidate = [adoptionPetHooks.keys.all];
 
 export const useAdoptionPetStatus = () =>
-  useApiMutation(({ id, status }: { id: Id; status: "available" | "on_hold" }) => adoptionPetsApi.setStatus(id, status), { invalidate: petInvalidate });
+  useApiMutation(({ id, status }: { id: Id; status: "available" | "on_hold" }) => adoptionPetsApi.setStatus(id, status), { invalidate: petInvalidate, revalidate: ADOPT_SITE });
 export const useAddPetImages = () =>
-  useApiMutation(({ id, urls }: { id: Id; urls: string[] }) => adoptionPetsApi.addImages(id, urls), { invalidate: petInvalidate, successMessage: "Photos added" });
+  useApiMutation(({ id, urls }: { id: Id; urls: string[] }) => adoptionPetsApi.addImages(id, urls), { invalidate: petInvalidate, revalidate: ADOPT_SITE, successMessage: "Photos added" });
 export const useSetPetCover = () =>
-  useApiMutation(({ id, imageId }: { id: Id; imageId: Id }) => adoptionPetsApi.setCover(id, imageId), { invalidate: petInvalidate, successMessage: "Cover photo updated" });
+  useApiMutation(({ id, imageId }: { id: Id; imageId: Id }) => adoptionPetsApi.setCover(id, imageId), { invalidate: petInvalidate, revalidate: ADOPT_SITE, successMessage: "Cover photo updated" });
 export const useRemovePetImage = () =>
-  useApiMutation(({ id, imageId }: { id: Id; imageId: Id }) => adoptionPetsApi.removeImage(id, imageId), { invalidate: petInvalidate, successMessage: "Photo removed" });
+  useApiMutation(({ id, imageId }: { id: Id; imageId: Id }) => adoptionPetsApi.removeImage(id, imageId), { invalidate: petInvalidate, revalidate: ADOPT_SITE, successMessage: "Photo removed" });
 
 /** Public list (react-query, optionally seeded with server data). */
 export const usePublicAdoptionPets = (params: ListParams, initialData?: Awaited<ReturnType<typeof adoptionPetsApi.list>>) =>
@@ -54,6 +57,8 @@ export const usePublicAdoptionPets = (params: ListParams, initialData?: Awaited<
     queryFn: () => adoptionPetsApi.list(params),
     placeholderData: (prev) => prev,
     initialData,
+    // server HTML can be up to a minute old (ISR) → show it instantly, refresh in the background
+    initialDataUpdatedAt: 0,
     staleTime: 60_000,
   });
 
@@ -133,7 +138,7 @@ export const useReviewApplication = () =>
   useApiMutation(
     ({ id, status, adminNote }: { id: Id; status: Exclude<ApplicationStatus, "pending" | "cancelled">; adminNote?: string }) =>
       applicationsApi.review(id, status, adminNote),
-    { invalidate: adoptionInvalidate },
+    { invalidate: adoptionInvalidate, revalidate: ADOPT_SITE },
   );
 
 /* ───────────────────────── adoptions ───────────────────────── */
@@ -159,14 +164,14 @@ export const useAdoption = (id: Id | null | undefined) =>
 
 export const useUpdateAdoption = () =>
   useApiMutation(({ id, ...body }: { id: Id; adoptionDate?: string; contractFile?: string | null; followUpDate?: string | null }) => adoptionsApi.update(id, body), {
-    invalidate: adoptionInvalidate,
+    invalidate: adoptionInvalidate, revalidate: ADOPT_SITE,
   });
 export const useCompleteAdoption = () =>
   useApiMutation(({ id, ...body }: { id: Id; adoptionDate?: string; contractFile?: string; followUpDate?: string }) => adoptionsApi.complete(id, body), {
-    invalidate: adoptionInvalidate,
+    invalidate: adoptionInvalidate, revalidate: ADOPT_SITE,
   });
 export const useCancelAdoption = () =>
-  useApiMutation(({ id, reason }: { id: Id; reason: string }) => adoptionsApi.cancel(id, reason), { invalidate: adoptionInvalidate });
+  useApiMutation(({ id, reason }: { id: Id; reason: string }) => adoptionsApi.cancel(id, reason), { invalidate: adoptionInvalidate, revalidate: ADOPT_SITE });
 
 /* ───────────────────────── labels & helpers ───────────────────────── */
 

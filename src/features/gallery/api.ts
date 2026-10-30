@@ -33,16 +33,17 @@ export const albumHooks = createResourceHooks("gallery-albums", createResource<G
 export const galleryItemHooks = createResourceHooks("gallery-items", createResource<GalleryItem, GalleryItemInput>("/gallery/items"));
 
 const invalidate = [galleryItemHooks.keys.all, albumHooks.keys.all];
+const revalidate = ["gallery"] as const;
 
 export const useBulkAddItems = () =>
   useApiMutation(
     (body: { albumId?: number | null; serviceId?: number | null; items: { fileUrl: string; title?: string; altText?: string }[] }) =>
       api.post<GalleryItem[]>("/gallery/items/bulk", body),
-    { invalidate, successMessage: (_, v) => `${v.items.length} photo${v.items.length === 1 ? "" : "s"} added` },
+    { invalidate, revalidate, successMessage: (_, v) => `${v.items.length} photo${v.items.length === 1 ? "" : "s"} added` },
   );
 
 export const useReorderItems = () =>
-  useApiMutation((items: { id: number; sortOrder: number }[]) => api.patch("/gallery/items/reorder", { items }), { invalidate, successMessage: "Order saved" });
+  useApiMutation((items: { id: number; sortOrder: number }[]) => api.patch("/gallery/items/reorder", { items }), { invalidate, revalidate, successMessage: "Order saved" });
 
 /** Compact album list for selects/filters. */
 export const useAlbumOptions = () =>

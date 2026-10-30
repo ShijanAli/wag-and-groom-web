@@ -63,6 +63,7 @@ export const useUpdateSettings = () =>
   useApiMutation((values: Record<string, unknown>) => api.patch<Setting[]>("/settings", { values }), {
     // public settings feed the website, booking wizard and contact details
     invalidate: [settingKeys.all],
+    revalidate: ["settings"],
     successMessage: "Settings saved",
   });
 

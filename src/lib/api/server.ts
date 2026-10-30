@@ -1,6 +1,7 @@
 import "server-only";
 import { API_URL } from "./client";
 import type { ApiResponse, ListParams, Paginated } from "./types";
+import { cacheTagFor } from "./cache-tags";
 
 /**
  * Server-side GET for public data (SEO pages). Cached by Next with ISR (`revalidate` seconds).
@@ -10,7 +11,7 @@ async function serverFetch<T>(path: string, params?: ListParams, revalidate = 30
   const qs = new URLSearchParams();
   Object.entries(params ?? {}).forEach(([k, v]) => v !== undefined && v !== null && v !== "" && qs.set(k, String(v)));
   try {
-    const res = await fetch(`${API_URL}${path}${qs.size ? `?${qs}` : ""}`, { next: { revalidate } });
+    const res = await fetch(`${API_URL}${path}${qs.size ? `?${qs}` : ""}`, { next: { revalidate, tags: [cacheTagFor(path)] } });
     if (!res.ok) return null;
     return (await res.json()) as ApiResponse<T>;
   } catch {

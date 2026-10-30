@@ -25,16 +25,20 @@ export const myReviewHooks = createResourceHooks("my-reviews", {
 });
 
 const invalidateAll = [reviewHooks.keys.all, myReviewHooks.keys.all, ["services"]];
+/** approved reviews + replies are shown on the service pages */
+const revalidate = ["services"] as const;
 
 export const useModerateReview = () =>
   useApiMutation(({ id, status }: { id: Id; status: Exclude<ReviewStatus, "pending"> }) => api.patch<Review>(`/reviews/${id}/status`, { status }), {
     invalidate: invalidateAll,
+    revalidate,
     successMessage: (_, v) => (v.status === "approved" ? "Review approved — it's live on the website" : "Review rejected"),
   });
 
 export const useReplyReview = () =>
   useApiMutation(({ id, reply }: { id: Id; reply: string | null }) => api.patch<Review>(`/reviews/${id}/reply`, { reply }), {
     invalidate: invalidateAll,
+    revalidate,
     successMessage: (_, v) => (v.reply ? "Reply published" : "Reply removed"),
   });
 

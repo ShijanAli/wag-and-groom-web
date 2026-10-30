@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { getErrorMessage, getStatus } from "@/lib/api/errors";
 import { refreshAccessToken, tokenStore } from "@/lib/api/client";
 import { authApi } from "@/features/auth/api";
 import { hasAnyPermission, hasPermission } from "@/lib/auth";
@@ -31,6 +33,13 @@ const AuthContext = createContext<AuthState | null>(null);
  * the same render tree) share ONE restore → one refresh call → no token reuse.
  */
 let restorePromise: Promise<AuthUser | null> | null = null;
+
+/** Tab refocus re-checks access at most this often (a 403 always re-checks). */
+const FOCUS_SYNC_MS = 15_000;
+
+/** Same role and same permission set? (order-insensitive) */
+const sameAccess = (a: AuthUser, b: AuthUser) =>
+  a.roleId === b.roleId && a.permissions.length === b.permissions.length && a.permissions.every((p) => b.permissions.includes(p));
 
 function restoreSession(): Promise<AuthUser | null> {
   if (!tokenStore.hasSessionHint()) return Promise.resolve(null);
@@ -93,6 +102,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUser = useCallback(async () => {
     applyUser(await authApi.me());
   }, [applyUser]);
+
+  /*
+   * Keep the UI in step with server-side access changes made by an admin while this
+   * user is signed in (role changed, permissions edited, account blocked):
+   *  - immediately when the API answers 403 "Missing permission" / "account is blocked" …
+   *  - when the user comes back to the tab (throttled)
+   * The menu, route guard and buttons all read `user.permissions`, so one re-sync updates everything.
+   */
+  const userRef = useRef(user);
+  userRef.current = user;
+  const syncing = useRef<Promise<void> | null>(null);
+  const lastSync = useRef(0);
+
+  const syncAccess = useCallback(() => {
+    const current = userRef.current;
+    if (!current) return Promise.resolve();
+    syncing.current ??= authApi
+      .me()
+      .then((fresh) => {
+        applyUser(fresh);
+        if (!sameAccess(current, fresh)) {
+          // private data fetched under the old access may be stale or no longer allowed
+          queryClient.invalidateQueries();
+          toast.info(fresh.roleId !== current.roleId ? `Your role is now ${fresh.role.name}` : "Your access was updated by an administrator");
+        }
+      })
+      .catch((err) => {
+        const code = getStatus(err);
+        if (code !== 401 && code !== 403) return; // offline / server error → try again later
+        // blocked, deactivated or deleted → end the session here too
+        tokenStore.set(null);
+        queryClient.clear();
+        applyUser(null);
+        toast.error(getErrorMessage(err, "Your session has ended"));
+      })
+      .finally(() => {
+        lastSync.current = Date.now();
+        syncing.current = null;
+      });
+    return syncing.current;
+  }, [applyUser, queryClient]);
+
+  useEffect(() => tokenStore.onAccessChanged(() => void syncAccess()), [syncAccess]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    const onFocus = () => {
+      if (document.visibilityState === "visible" && Date.now() - lastSync.current > FOCUS_SYNC_MS) void syncAccess();
+    };
+    lastSync.current = Date.now(); // just signed in / restored → fresh
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [status, syncAccess]);
 
   const value = useMemo<AuthState>(
     () => ({
