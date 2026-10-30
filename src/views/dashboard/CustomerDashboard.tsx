@@ -1,468 +1,348 @@
 "use client";
 
-import { NotificationBell } from "@/components/common/NotificationBell";
-import { UserMenu } from "@/components/common/UserMenu";
-
-import { useState } from "react";
-import Link from "next/link";
-import { Dog, CalendarDays, CreditCard, PawPrint, Plus, Edit, Trash2, X as XIcon, Clock, MoreHorizontal, RotateCcw, Check } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { useAppState, Pet } from "@/context/AppContext";
-import { BookingModal } from "@/components/BookingModal";
+import { useMemo, useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { CalendarCheck, CalendarDays, CreditCard, Eye, Loader2, PawPrint, Pencil, Plus, RotateCcw, Syringe, Trash2, Wallet, X } from "lucide-react";
+import { useConfirm } from "@/components/common/ConfirmDialog";
+import { DataTable, DataTablePagination, RowActions } from "@/components/common/data-table";
+import { EmptyState } from "@/components/common/EmptyState";
+import { FormModal } from "@/components/common/form/FormModal";
+import { Modal } from "@/components/common/Modal";
+import { PanelHeader } from "@/components/common/PanelHeader";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
+import { useCrudDelete, useCrudEditor } from "@/hooks/use-crud";
+import { useListParams } from "@/hooks/use-list-params";
+import { useTabParam } from "@/hooks/use-tab-param";
+import { formatDateTime, formatMoney, toApiDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { ProfileSettings } from "@/features/auth/ProfileSettings";
+import { BookingModal } from "@/features/bookings/BookingModal";
+import { BookingBadges, BookingDetail, BookingFacts } from "@/features/bookings/components";
+import { canCustomerCancel, useCancelMyBooking, useMyBooking, useMyBookings, usePayOnline } from "@/features/bookings/api";
+import { usePetTypeOptions } from "@/features/catalog/api";
+import { METHOD_LABEL, useMyPayments } from "@/features/payments/api";
+import { myPetHooks, petAge, type PetInput } from "@/features/pets/api";
+import { PetFields, petSchema, toPetForm, toPetInput, type PetForm } from "@/features/pets/PetFields";
+import { usePublicSettings } from "@/features/settings/api";
+import type { Booking, Payment, Pet } from "@/types/models";
 
-const statusColors: Record<string, string> = {
-  Pending: "bg-warning/10 text-warning-foreground",
-  Confirmed: "bg-primary/10 text-primary",
-  Completed: "bg-success/10 text-success",
-  Cancelled: "bg-destructive/10 text-destructive",
-  Paid: "bg-success/10 text-success",
-  Refunded: "bg-muted text-muted-foreground",
-};
-
-const TIME_SLOTS = ["8:00 AM","9:00 AM","10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM"];
+const TABS = ["bookings", "pets", "payments", "profile"] as const;
+const PAYABLE = (b: Booking) => ["pending", "confirmed"].includes(b.status) && ["unpaid", "partial"].includes(b.paymentStatus);
 
 export default function CustomerDashboard() {
-  const { pets, bookings, payments, addPet, updatePet, deletePet, updateBooking, cancelBooking } = useAppState();
-  const [bookingModalOpen, setBookingModalOpen] = useState(false);
-  const [petModalOpen, setPetModalOpen] = useState(false);
-  const [editingPet, setEditingPet] = useState<Pet | null>(null);
-  const [rescheduleModal, setRescheduleModal] = useState<string | null>(null);
-
-  // Pet form state
-  const [petName, setPetName] = useState("");
-  const [petType, setPetType] = useState<"Dog" | "Cat" | "Other">("Dog");
-  const [petBreed, setPetBreed] = useState("");
-  const [petAge, setPetAge] = useState("");
-  const [petWeight, setPetWeight] = useState("");
-  const [petNotes, setPetNotes] = useState("");
-
-  // Reschedule state
-  const [rescheduleDate, setRescheduleDate] = useState<Date>();
-  const [rescheduleTime, setRescheduleTime] = useState("");
-
-  const upcomingBookings = bookings.filter((b) => b.status === "Confirmed" || b.status === "Pending");
-  const pastBookings = bookings.filter((b) => b.status === "Completed" || b.status === "Cancelled");
-  const totalSpent = payments.filter((p) => p.status === "Paid").reduce((sum, p) => sum + p.amount, 0);
-
-  const openAddPet = () => {
-    setEditingPet(null);
-    setPetName(""); setPetType("Dog"); setPetBreed(""); setPetAge(""); setPetWeight(""); setPetNotes("");
-    setPetModalOpen(true);
-  };
-
-  const openEditPet = (pet: Pet) => {
-    setEditingPet(pet);
-    setPetName(pet.name); setPetType(pet.type); setPetBreed(pet.breed); setPetAge(pet.age); setPetWeight(pet.weight); setPetNotes(pet.notes);
-    setPetModalOpen(true);
-  };
-
-  const handleSavePet = () => {
-    if (!petName.trim()) { toast({ title: "Pet name is required", variant: "destructive" }); return; }
-    const data = { name: petName.trim(), type: petType, breed: petBreed.trim(), age: petAge.trim(), weight: petWeight.trim(), notes: petNotes.trim() };
-    if (editingPet) {
-      updatePet(editingPet.id, data);
-      toast({ title: "Pet updated!", description: `${data.name}'s profile has been updated.` });
-    } else {
-      addPet(data);
-      toast({ title: "Pet added! 🐾", description: `${data.name} has been added to your pets.` });
-    }
-    setPetModalOpen(false);
-  };
-
-  const handleDeletePet = (pet: Pet) => {
-    deletePet(pet.id);
-    toast({ title: "Pet removed", description: `${pet.name} has been removed from your pets.` });
-  };
-
-  const handleCancelBooking = (id: string) => {
-    cancelBooking(id);
-    toast({ title: "Booking cancelled", description: "Your booking has been cancelled." });
-  };
-
-  const handleReschedule = () => {
-    if (!rescheduleModal || !rescheduleDate || !rescheduleTime) return;
-    updateBooking(rescheduleModal, {
-      date: format(rescheduleDate, "yyyy-MM-dd"),
-      time: rescheduleTime,
-      status: "Pending",
-    });
-    toast({ title: "Booking rescheduled!", description: `Rescheduled to ${format(rescheduleDate, "PPP")} at ${rescheduleTime}` });
-    setRescheduleModal(null);
-    setRescheduleDate(undefined);
-    setRescheduleTime("");
-  };
+  const { user } = useAuth();
+  const [tab, setTab] = useTabParam(TABS, "bookings");
+  const [booking, setBooking] = useState<{ open: boolean; serviceId?: number }>({ open: false });
+  const openBooking = (serviceId?: number) => setBooking({ open: true, serviceId });
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="container mx-auto flex items-center justify-between h-16 px-4">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
-              <Dog className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-display text-xl font-bold text-foreground">PetPlex</span>
-          </Link>
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="/" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Home</Link>
-            <Link href="/services" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Services</Link>
-            <Link href="/dashboard" className="text-sm font-medium text-foreground transition-colors">Dashboard</Link>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button size="sm" className="mr-1" onClick={() => setBookingModalOpen(true)}>Book Now</Button>
-            <NotificationBell />
-            <UserMenu />
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-muted/30">
+      <PanelHeader
+        home="/"
+        links={[
+          { label: "Home", href: "/" },
+          { label: "Services", href: "/services" },
+          { label: "My dashboard", href: "/dashboard" },
+        ]}
+        profileHref="/dashboard?tab=profile"
+        actions={
+          <Button size="sm" className="mr-1 hidden rounded-full sm:inline-flex" onClick={() => openBooking()}>
+            Book now
+          </Button>
+        }
+      />
+      <BookingModal open={booking.open} onOpenChange={(open) => setBooking((b) => ({ ...b, open }))} serviceId={booking.serviceId} />
 
-      <div className="container mx-auto px-4 pt-24 pb-16">
-        <div className="flex items-center justify-between mb-8">
+      <main className="container mx-auto space-y-8 px-4 py-8">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <h1 className="text-3xl font-display font-bold text-foreground">My Dashboard</h1>
-            <p className="text-muted-foreground">Manage your pets, bookings, and payments</p>
+            <h1 className="font-display text-3xl font-bold">Hi {user?.firstName} 👋</h1>
+            <p className="text-muted-foreground">Your bookings, pets and payments in one place.</p>
           </div>
-          <Button onClick={() => setBookingModalOpen(true)} className="gap-2">
-            <Plus className="w-4 h-4" /> New Booking
+          <Button onClick={() => openBooking()} className="gap-2">
+            <Plus className="h-4 w-4" /> New booking
           </Button>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Card className="border-border">
-            <CardContent className="p-4 text-center">
-              <PawPrint className="w-6 h-6 text-primary mx-auto mb-1" />
-              <p className="text-2xl font-bold text-foreground">{pets.length}</p>
-              <p className="text-xs text-muted-foreground">My Pets</p>
-            </CardContent>
-          </Card>
-          <Card className="border-border">
-            <CardContent className="p-4 text-center">
-              <CalendarDays className="w-6 h-6 text-secondary mx-auto mb-1" />
-              <p className="text-2xl font-bold text-foreground">{upcomingBookings.length}</p>
-              <p className="text-xs text-muted-foreground">Upcoming</p>
-            </CardContent>
-          </Card>
-          <Card className="border-border">
-            <CardContent className="p-4 text-center">
-              <Check className="w-6 h-6 text-success mx-auto mb-1" />
-              <p className="text-2xl font-bold text-foreground">{pastBookings.filter(b => b.status === "Completed").length}</p>
-              <p className="text-xs text-muted-foreground">Completed</p>
-            </CardContent>
-          </Card>
-          <Card className="border-border">
-            <CardContent className="p-4 text-center">
-              <CreditCard className="w-6 h-6 text-primary mx-auto mb-1" />
-              <p className="text-2xl font-bold text-foreground">${totalSpent}</p>
-              <p className="text-xs text-muted-foreground">Total Spent</p>
-            </CardContent>
-          </Card>
-        </div>
+        <Stats />
 
-        {/* Tabs */}
-        <Tabs defaultValue="bookings" className="space-y-6">
-          <TabsList className="bg-muted">
+        <Tabs value={tab} onValueChange={setTab} className="space-y-6">
+          <TabsList className="h-auto flex-wrap">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="pets">My Pets</TabsTrigger>
+            <TabsTrigger value="pets">My pets</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
-
-          {/* Bookings Tab */}
-          <TabsContent value="bookings" className="space-y-6">
-            {upcomingBookings.length > 0 && (
-              <div>
-                <h2 className="font-display text-lg font-semibold text-foreground mb-3">Upcoming Appointments</h2>
-                <div className="space-y-3">
-                  {upcomingBookings.map((b) => (
-                    <Card key={b.id} className="border-border">
-                      <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center shrink-0">
-                            <Dog className="w-5 h-5 text-accent-foreground" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-card-foreground">{b.service}</p>
-                            <p className="text-sm text-muted-foreground">{b.petName} · {b.date} · {b.time}</p>
-                            {b.notes && <p className="text-xs text-muted-foreground mt-1 italic">"{b.notes}"</p>}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-primary font-bold">${b.price}</span>
-                          <Badge className={statusColors[b.status]}>{b.status}</Badge>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1"
-                            onClick={() => { setRescheduleModal(b.id); setRescheduleDate(undefined); setRescheduleTime(""); }}
-                          >
-                            <RotateCcw className="w-3 h-3" /> Reschedule
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-destructive gap-1"
-                            onClick={() => handleCancelBooking(b.id)}
-                          >
-                            <XIcon className="w-3 h-3" /> Cancel
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {pastBookings.length > 0 && (
-              <div>
-                <h2 className="font-display text-lg font-semibold text-foreground mb-3">Past Appointments</h2>
-                <div className="space-y-3">
-                  {pastBookings.map((b) => (
-                    <Card key={b.id} className="border-border opacity-80">
-                      <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
-                            <Dog className="w-5 h-5 text-muted-foreground" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-card-foreground">{b.service}</p>
-                            <p className="text-sm text-muted-foreground">{b.petName} · {b.date} · {b.time}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground font-medium">${b.price}</span>
-                          <Badge className={statusColors[b.status]}>{b.status}</Badge>
-                          {b.status === "Completed" && (
-                            <Button variant="outline" size="sm" onClick={() => setBookingModalOpen(true)}>Book Again</Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {bookings.length === 0 && (
-              <div className="text-center py-12">
-                <CalendarDays className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No bookings yet.</p>
-                <Button className="mt-4" onClick={() => setBookingModalOpen(true)}>Book Your First Appointment</Button>
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Pets Tab */}
-          <TabsContent value="pets" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="font-display text-lg font-semibold text-foreground">My Pets</h2>
-              <Button size="sm" onClick={openAddPet} className="gap-1"><Plus className="w-4 h-4" /> Add Pet</Button>
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {pets.map((pet) => (
-                <Card key={pet.id} className="border-border">
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-2xl">
-                          {pet.type === "Dog" ? "🐕" : pet.type === "Cat" ? "🐈" : "🐾"}
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-card-foreground">{pet.name}</h3>
-                          <p className="text-sm text-muted-foreground">{pet.type} · {pet.breed || "Unknown breed"}</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditPet(pet)}>
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeletePet(pet)}>
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="mt-3 pt-3 border-t border-border grid grid-cols-2 gap-2 text-sm">
-                      {pet.age && <div><span className="text-muted-foreground">Age:</span> <span className="text-card-foreground">{pet.age}</span></div>}
-                      {pet.weight && <div><span className="text-muted-foreground">Weight:</span> <span className="text-card-foreground">{pet.weight}</span></div>}
-                    </div>
-                    {pet.notes && <p className="text-xs text-muted-foreground mt-2 italic">"{pet.notes}"</p>}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {pets.length === 0 && (
-              <div className="text-center py-12">
-                <PawPrint className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No pets added yet.</p>
-                <Button className="mt-4" onClick={openAddPet}>Add Your First Pet</Button>
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Payments Tab */}
-          <TabsContent value="payments">
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="font-display text-foreground">Payment History</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {payments.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-border">
-                          <th className="text-left py-3 px-2 text-muted-foreground font-medium">Service</th>
-                          <th className="text-left py-3 px-2 text-muted-foreground font-medium">Amount</th>
-                          <th className="text-left py-3 px-2 text-muted-foreground font-medium">Date</th>
-                          <th className="text-left py-3 px-2 text-muted-foreground font-medium">Method</th>
-                          <th className="text-left py-3 px-2 text-muted-foreground font-medium">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {payments.map((p) => (
-                          <tr key={p.id} className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
-                            <td className="py-3 px-2 font-medium text-card-foreground">{p.service}</td>
-                            <td className="py-3 px-2 font-bold text-foreground">${p.amount}</td>
-                            <td className="py-3 px-2 text-muted-foreground">{p.date}</td>
-                            <td className="py-3 px-2 text-muted-foreground">{p.method}</td>
-                            <td className="py-3 px-2">
-                              <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", statusColors[p.status])}>{p.status}</span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <CreditCard className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-muted-foreground">No payments yet.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <TabsContent value="bookings">{tab === "bookings" && <BookingsTab onBook={openBooking} />}</TabsContent>
+          <TabsContent value="pets">{tab === "pets" && <PetsTab />}</TabsContent>
+          <TabsContent value="payments">{tab === "payments" && <PaymentsTab />}</TabsContent>
+          <TabsContent value="profile">{tab === "profile" && <ProfileSettings />}</TabsContent>
         </Tabs>
-      </div>
-
-      {/* Booking Modal */}
-      <BookingModal open={bookingModalOpen} onOpenChange={setBookingModalOpen} />
-
-      {/* Pet Add/Edit Modal */}
-      <Dialog open={petModalOpen} onOpenChange={setPetModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-display">{editingPet ? "Edit Pet" : "Add New Pet"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Pet Name *</Label>
-              <Input value={petName} onChange={(e) => setPetName(e.target.value)} placeholder="e.g. Buddy" className="mt-1" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Pet Type</Label>
-                <Select value={petType} onValueChange={(v) => setPetType(v as "Dog" | "Cat" | "Other")}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Dog">Dog</SelectItem>
-                    <SelectItem value="Cat">Cat</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Breed</Label>
-                <Input value={petBreed} onChange={(e) => setPetBreed(e.target.value)} placeholder="e.g. Golden Retriever" className="mt-1" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Age</Label>
-                <Input value={petAge} onChange={(e) => setPetAge(e.target.value)} placeholder="e.g. 4 years" className="mt-1" />
-              </div>
-              <div>
-                <Label>Weight</Label>
-                <Input value={petWeight} onChange={(e) => setPetWeight(e.target.value)} placeholder="e.g. 30 kg" className="mt-1" />
-              </div>
-            </div>
-            <div>
-              <Label>Special Notes</Label>
-              <Textarea value={petNotes} onChange={(e) => setPetNotes(e.target.value)} placeholder="Any allergies, preferences..." className="mt-1" rows={3} />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setPetModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleSavePet}>{editingPet ? "Save Changes" : "Add Pet"}</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reschedule Modal */}
-      <Dialog open={!!rescheduleModal} onOpenChange={(open) => { if (!open) setRescheduleModal(null); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-display">Reschedule Appointment</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>New Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal mt-1", !rescheduleDate && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {rescheduleDate ? format(rescheduleDate, "PPP") : "Pick a new date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={rescheduleDate}
-                    onSelect={setRescheduleDate}
-                    disabled={(d) => d < new Date()}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div>
-              <Label>New Time</Label>
-              <div className="grid grid-cols-3 gap-2 mt-2">
-                {TIME_SLOTS.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setRescheduleTime(t)}
-                    className={cn(
-                      "p-2 rounded-lg border text-sm font-medium transition-all",
-                      rescheduleTime === t ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/30 text-foreground"
-                    )}
-                  >{t}</button>
-                ))}
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setRescheduleModal(null)}>Cancel</Button>
-              <Button onClick={handleReschedule} disabled={!rescheduleDate || !rescheduleTime}>Confirm Reschedule</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      </main>
     </div>
   );
+}
+
+/* ───────────────────────── stats ───────────────────────── */
+
+function Stats() {
+  const today = toApiDate(new Date());
+  // limit 1 → only the totals in `meta` are needed
+  const pets = myPetHooks.useList({ limit: 1 });
+  const upcoming = useMyBookings({ limit: 1, from: today, status: "confirmed" });
+  const pending = useMyBookings({ limit: 1, status: "pending" });
+  const completed = useMyBookings({ limit: 1, status: "completed" });
+  const items = [
+    { label: "My pets", value: pets.data?.meta.total, icon: PawPrint, tone: "text-primary bg-primary/10" },
+    { label: "Upcoming", value: upcoming.data?.meta.total, icon: CalendarDays, tone: "text-secondary bg-secondary/10" },
+    { label: "Awaiting payment", value: pending.data?.meta.total, icon: Wallet, tone: "text-amber-600 bg-warning/15" },
+    { label: "Completed", value: completed.data?.meta.total, icon: CalendarCheck, tone: "text-success bg-success/10" },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {items.map((i) => (
+        <Card key={i.label}>
+          <CardContent className="flex items-center gap-4 p-5">
+            <span className={cn("flex h-11 w-11 items-center justify-center rounded-xl", i.tone)}>
+              <i.icon className="h-5 w-5" />
+            </span>
+            <div>
+              {i.value === undefined ? <Skeleton className="mb-1 h-7 w-8" /> : <p className="text-2xl font-bold">{i.value}</p>}
+              <p className="text-xs text-muted-foreground">{i.label}</p>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+/* ───────────────────────── bookings ───────────────────────── */
+
+const PERIODS = [
+  { key: "upcoming", label: "Upcoming" },
+  { key: "past", label: "Past" },
+  { key: "all", label: "All" },
+] as const;
+
+function BookingsTab({ onBook }: { onBook: (serviceId?: number) => void }) {
+  const list = useListParams({ defaults: { limit: 5, period: "upcoming" } });
+  const today = toApiDate(new Date());
+  const period = (list.params.period as string) ?? "upcoming";
+  const { period: _p, ...rest } = list.params;
+  const query = useMyBookings({
+    ...rest,
+    ...(period === "upcoming" && { from: today, sortBy: "bookingDate", sortOrder: "asc" }),
+    ...(period === "past" && { to: today, sortBy: "bookingDate", sortOrder: "desc" }),
+    ...(period === "all" && { sortBy: "createdAt", sortOrder: "desc" }),
+  });
+  const [detailNo, setDetailNo] = useState<string | null>(null);
+  const settings = usePublicSettings();
+  const cancel = useCancelMyBooking();
+  const pay = usePayOnline();
+  const { confirm } = useConfirm();
+  const cutoff = settings.data?.booking_cancel_before_hours ?? 24;
+  const rows = query.data?.data ?? [];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2" role="tablist" aria-label="Period">
+        {PERIODS.map((p) => (
+          <Button key={p.key} size="sm" variant={period === p.key ? "default" : "outline"} className="rounded-full" role="tab" aria-selected={period === p.key} onClick={() => list.setParams({ period: p.key })}>
+            {p.label}
+          </Button>
+        ))}
+      </div>
+
+      {query.isPending ? (
+        Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-28 w-full rounded-xl" />)
+      ) : rows.length === 0 ? (
+        <EmptyState
+          icon={CalendarDays}
+          title={period === "upcoming" ? "No upcoming bookings" : "No bookings here"}
+          description="Book grooming, walks or a spa day in under a minute."
+          action={<Button onClick={() => onBook()}>Book now</Button>}
+          className="bg-card"
+        />
+      ) : (
+        <div className={cn("space-y-3 transition-opacity", query.isFetching && "opacity-60")}>
+          {rows.map((b) => (
+            <Card key={b.id}>
+              <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-semibold">{b.service.name}</h3>
+                    <BookingBadges booking={b} />
+                  </div>
+                  <BookingFacts booking={b} />
+                  <p className="font-mono text-xs text-muted-foreground">{b.bookingNo}</p>
+                </div>
+                <div className="flex flex-wrap gap-2 lg:justify-end">
+                  {PAYABLE(b) && (
+                    <Button size="sm" disabled={pay.isPending} onClick={() => pay.mutate({ bookingId: b.id })}>
+                      {pay.isPending && pay.variables?.bookingId === b.id ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CreditCard className="mr-1.5 h-4 w-4" />}
+                      Pay now
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" onClick={() => setDetailNo(b.bookingNo)}>
+                    <Eye className="mr-1.5 h-4 w-4" /> Details
+                  </Button>
+                  {canCustomerCancel(b, cutoff) && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() =>
+                        confirm({
+                          title: "Cancel this booking?",
+                          description: `${b.service.name} for ${b.pet.name} will be cancelled and the slot released. Online payments are refunded by our team.`,
+                          confirmText: "Cancel booking",
+                          cancelText: "Keep it",
+                          tone: "danger",
+                          onConfirm: () => cancel.mutateAsync({ idOrNo: b.bookingNo }),
+                        })
+                      }
+                    >
+                      <X className="mr-1.5 h-4 w-4" /> Cancel
+                    </Button>
+                  )}
+                  {["completed", "cancelled", "no_show"].includes(b.status) && (
+                    <Button size="sm" variant="ghost" onClick={() => onBook(b.serviceId)}>
+                      <RotateCcw className="mr-1.5 h-4 w-4" /> Book again
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          {query.data && query.data.meta.totalPages > 1 && (
+            <div className="overflow-hidden rounded-xl border bg-card">
+              <DataTablePagination meta={query.data.meta} onChange={list.setParams} />
+            </div>
+          )}
+        </div>
+      )}
+
+      <MyBookingModal bookingNo={detailNo} onClose={() => setDetailNo(null)} />
+    </div>
+  );
+}
+
+function MyBookingModal({ bookingNo, onClose }: { bookingNo: string | null; onClose: () => void }) {
+  const detail = useMyBooking(bookingNo);
+  return (
+    <Modal open={!!bookingNo} onOpenChange={(o) => !o && onClose()} title="Booking details" size="lg">
+      {detail.data ? <BookingDetail booking={detail.data} /> : <Skeleton className="h-80 w-full" />}
+    </Modal>
+  );
+}
+
+/* ───────────────────────── pets ───────────────────────── */
+
+function PetsTab() {
+  const pets = myPetHooks.useList({ limit: 50, sortBy: "name", sortOrder: "asc" });
+  const types = usePetTypeOptions();
+  const editor = useCrudEditor<Pet, PetForm, PetInput>({
+    hooks: myPetHooks,
+    entity: "pet",
+    toForm: (p) => toPetForm(p),
+    toInput: (v) => toPetInput(v),
+  });
+  const remove = useCrudDelete(myPetHooks, "pet", (p: Pet) => p.name);
+  const list = pets.data?.data ?? [];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={() => editor.open()} className="gap-2">
+          <Plus className="h-4 w-4" /> Add pet
+        </Button>
+      </div>
+      {pets.isPending ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-36 rounded-xl" />
+          ))}
+        </div>
+      ) : list.length === 0 ? (
+        <EmptyState icon={PawPrint} title="No pets yet" description="Add your pet once and book faster every time." className="bg-card" />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {list.map((p) => (
+            <Card key={p.id}>
+              <CardContent className="flex gap-4 p-5">
+                {p.photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- Cloudinary avatar
+                  <img src={p.photo} alt="" className="h-16 w-16 shrink-0 rounded-2xl object-cover" />
+                ) : (
+                  <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-accent text-primary">
+                    <PawPrint className="h-7 w-7" />
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="truncate font-display text-lg font-semibold">{p.name}</h3>
+                    <RowActions
+                      actions={[
+                        { label: "Edit", icon: Pencil, onClick: () => editor.open(p) },
+                        { label: "Delete", icon: Trash2, danger: true, onClick: () => remove(p) },
+                      ]}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">{[p.petType.name, p.breed].filter(Boolean).join(" · ")}</p>
+                  <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+                    {petAge(p.dateOfBirth) && <span className="rounded-md bg-muted px-2 py-0.5">{petAge(p.dateOfBirth)}</span>}
+                    {p.size && <span className="rounded-md bg-muted px-2 py-0.5 capitalize">{p.size}</span>}
+                    {p.weightKg && <span className="rounded-md bg-muted px-2 py-0.5">{Number(p.weightKg)} kg</span>}
+                    {p.isVaccinated && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-success/10 px-2 py-0.5 text-success">
+                        <Syringe className="h-3 w-3" /> Vaccinated
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+      <FormModal schema={petSchema} size="lg" {...editor.modalProps}>
+        <PetFields typeOptions={types.data ?? []} />
+      </FormModal>
+    </div>
+  );
+}
+
+/* ───────────────────────── payments ───────────────────────── */
+
+function PaymentsTab() {
+  const list = useListParams({ defaults: { sortBy: "createdAt", sortOrder: "desc" } });
+  const query = useMyPayments(list.params);
+  const columns = useMemo<ColumnDef<Payment>[]>(
+    () => [
+      { id: "createdAt", header: "Date", enableSorting: true, cell: ({ row }) => formatDateTime(row.original.paidAt ?? row.original.createdAt) },
+      { id: "booking", header: "Booking", cell: ({ row }) => <span className="font-mono text-xs">{row.original.booking?.bookingNo ?? "—"}</span> },
+      { id: "method", header: "Method", cell: ({ row }) => (row.original.type === "refund" ? "Refund" : METHOD_LABEL[row.original.method]) },
+      {
+        id: "amount",
+        header: "Amount",
+        enableSorting: true,
+        cell: ({ row }) => (
+          <span className={cn("font-semibold", row.original.type === "refund" && "text-success")}>
+            {row.original.type === "refund" ? "+" : ""}
+            {formatMoney(row.original.amount, row.original.currency)}
+          </span>
+        ),
+      },
+      { id: "status", header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+      { id: "tx", header: "Transaction", cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.transactionId}</span> },
+    ],
+    [],
+  );
+  return <DataTable columns={columns} query={query} list={list} emptyTitle="No payments yet" emptyDescription="Payments for your bookings will show up here." />;
 }

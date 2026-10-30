@@ -97,3 +97,27 @@ What you get with no extra code:
 - Success and error toasts, with backend 422 errors shown under the matching inputs.
 - Cache invalidation after mutations.
 - A confirm dialog with a spinner that stays open if the request fails.
+
+## Bookings & payments (F3)
+
+- **Services page** (`/services`) is rendered on the server from the API, with ISR every 5 minutes. That
+  makes it good for SEO (JSON-LD offers in BDT), and it falls back to an empty state if the API is down.
+- **BookingModal** (`features/bookings/BookingModal.tsx`) runs in 4 steps:
+  1. Service
+  2. Pet — incompatible pets are disabled, and you can quick-add a pet without leaving the modal
+  3. Date & time — live `/services/:id/availability`, with an optional staff choice
+  4. Confirm — promo code is checked with `/promotions/validate`
+
+  After confirming, it creates the booking and the customer chooses **Pay now** (SSLCommerz) or **Pay later**.
+- **SSLCommerz flow:**
+  1. `POST /payments/init` returns `gatewayUrl`, and the browser goes to that hosted page.
+  2. The gateway posts back to the backend, which verifies the payment server-side.
+  3. The backend redirects with 303 to `/payment/success|failed|cancelled?tranId&bookingNo`.
+  4. That page only *shows* the result (and "Try again" when allowed).
+- **Status changes** use `StatusActions`, which follows the same `STATUS_TRANSITIONS` as the backend.
+  Cancel and no-show ask for a reason first. The same component is used by staff (`/staff`) and admins
+  (`/admin/bookings`).
+- **Counter payments and refunds** use `RecordPaymentModal` and `RefundModal` (`features/payments`). The
+  amount defaults to what is due or what can still be refunded.
+- **Cache scope:** one `["bookings"]` scope covers every booking list. Any booking or payment change refreshes
+  the customer, staff and admin views together.

@@ -12,6 +12,7 @@ import {
   User,
   UserCog,
   Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { PERMISSIONS as P, type PermissionSlug } from "@/lib/permissions";
@@ -40,6 +41,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     items: [
       { title: "Dashboard", url: "/admin", icon: LayoutDashboard, anyOf: [P.DASHBOARD.VIEW], keywords: ["home", "overview", "stats"] },
       { title: "Bookings", url: "/admin/bookings", icon: CalendarDays, anyOf: [P.BOOKING.VIEW], keywords: ["appointments", "schedule"] },
+      { title: "Payments", url: "/admin/payments", icon: Wallet, anyOf: [P.PAYMENT.VIEW], keywords: ["transactions", "refunds", "sslcommerz", "cash"] },
       { title: "Customers", url: "/admin/customers", icon: Users, anyOf: [P.USER.VIEW], keywords: ["clients", "users"] },
     ],
   },

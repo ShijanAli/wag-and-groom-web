@@ -218,9 +218,17 @@ export function SegmentedField({ options, ...props }: BaseProps & { options: (Op
 /** Date picker. Value is an API date string "YYYY-MM-DD". */
 export function DateField({
   fromDate,
+  toDate,
+  yearPicker = false,
   placeholder = "Pick a date",
   ...props
-}: BaseProps & { fromDate?: Date; placeholder?: string }) {
+}: BaseProps & {
+  fromDate?: Date;
+  toDate?: Date;
+  /** Month + year dropdowns (birthdays and other far-away dates). */
+  yearPicker?: boolean;
+  placeholder?: string;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <ChoiceShell {...props}>
@@ -242,6 +250,8 @@ export function DateField({
                 selected={date}
                 defaultMonth={date}
                 fromDate={fromDate}
+                toDate={toDate}
+                {...(yearPicker && { captionLayout: "dropdown-buttons" as const, fromYear: 1990, toYear: (toDate ?? new Date()).getFullYear() })}
                 onSelect={(d) => {
                   onChange(d ? toApiDate(d) : "");
                   setOpen(false);

@@ -73,6 +73,19 @@ export function TableFilter({
   );
 }
 
+/** From–to date filter bound to two params (default `from` / `to`, "YYYY-MM-DD"). */
+export function TableDateRange({ list, fromParam = "from", toParam = "to", label = "Date" }: { list: UseListParams; fromParam?: string; toParam?: string; label?: string }) {
+  const from = (list.params[fromParam] as string | undefined) ?? "";
+  const to = (list.params[toParam] as string | undefined) ?? "";
+  return (
+    <div className="flex items-center gap-1.5" role="group" aria-label={`${label} range`}>
+      <Input type="date" value={from} max={to || undefined} onChange={(e) => list.setParams({ [fromParam]: e.target.value || undefined })} className="h-9 w-full sm:w-[150px]" aria-label={`${label} from`} />
+      <span className="text-xs text-muted-foreground">to</span>
+      <Input type="date" value={to} min={from || undefined} onChange={(e) => list.setParams({ [toParam]: e.target.value || undefined })} className="h-9 w-full sm:w-[150px]" aria-label={`${label} to`} />
+    </div>
+  );
+}
+
 const CONTROL_KEYS = new Set(["page", "limit", "sortBy", "sortOrder"]);
 
 /** Layout: search + filters on the left, actions on the right, "Clear" when anything is filtered. */

@@ -90,3 +90,13 @@ export function summarizeSchedule(schedules: StaffSchedule[]): string[] {
   flush();
   return lines;
 }
+
+export interface MySchedule {
+  staff: { id: number; firstName: string; lastName: string };
+  schedules: StaffSchedule[];
+  upcomingBlockedDates: BlockedDate[];
+}
+
+/** The signed-in staff member's own week + upcoming days off. */
+export const useMySchedule = () =>
+  useQuery({ queryKey: ["staff", "me", "schedule"], queryFn: () => api.get<MySchedule>("/staff/me/schedule"), staleTime: 5 * 60_000 });

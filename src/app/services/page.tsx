@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import ServicesPage from "@/views/ServicesPage";
-import { PACKAGES, SERVICES, SERVICE_FAQS } from "@/lib/services";
+import { serverGet } from "@/lib/api/server";
+import { SERVICE_FAQS } from "@/lib/services";
+import type { PublicSettings, Service, ServiceCategory } from "@/types/models";
 import { SITE } from "@/lib/site";
 
 const title = "Pet Grooming, Walking, Sitting & Spa Services and Prices";
 const description =
-  "Explore PetPlex services and prices in San Francisco: dog grooming from $40, dog walking from $20, pet sitting, daycare and luxury pet spa. Certified groomers, pet-safe products, free cancellation. Book online.";
+  "Explore PetPlex pet grooming, walking, sitting, daycare and spa services with clear prices in BDT. Certified handlers, pet-safe products, free cancellation. Book online in a minute.";
 const ogImage = "/images/service-grooming.jpg";
 
 export const metadata: Metadata = {
@@ -13,7 +15,7 @@ export const metadata: Metadata = {
   description,
   keywords: [
     "pet grooming prices",
-    "dog grooming San Francisco",
+    "dog grooming Dhaka",
     "dog walking near me",
     "pet sitting",
     "pet daycare",
@@ -34,7 +36,10 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: `${title} | ${SITE.name}`, description, images: [ogImage] },
 };
 
-const jsonLd = {
+/** Catalog is public + changes rarely → statically rendered and refreshed every 5 minutes (ISR). */
+export const revalidate = 300;
+
+const buildJsonLd = (services: Service[]) => ({
   "@context": "https://schema.org",
   "@graph": [
     {
@@ -46,31 +51,21 @@ const jsonLd = {
     },
     {
       "@type": "ItemList",
-      name: "PetPlex pet care services",
-      itemListElement: SERVICES.map((s, i) => ({
+      name: `${SITE.name} pet care services`,
+      itemListElement: services.map((s, i) => ({
         "@type": "ListItem",
         position: i + 1,
         item: {
           "@type": "Service",
-          "@id": `${SITE.url}/services#${s.slug}`,
-          name: s.title,
-          description: s.desc,
-          image: `${SITE.url}${s.image}`,
-          url: `${SITE.url}/services#${s.slug}`,
+          "@id": `${SITE.url}/services#service-${s.slug}`,
+          name: s.name,
+          description: s.shortDescription ?? s.description ?? undefined,
+          ...(s.image && { image: s.image }),
+          category: s.category.name,
           provider: { "@type": "LocalBusiness", "@id": `${SITE.url}/#business`, name: SITE.name },
-          areaServed: { "@type": "City", name: SITE.address.city },
-          offers: { "@type": "Offer", price: s.price, priceCurrency: "USD" },
+          offers: { "@type": "Offer", price: Number(s.discountPrice ?? s.price), priceCurrency: "BDT" },
+          ...(s.reviewsCount > 0 && { aggregateRating: { "@type": "AggregateRating", ratingValue: s.avgRating, reviewCount: s.reviewsCount } }),
         },
-      })),
-    },
-    {
-      "@type": "OfferCatalog",
-      name: "Grooming packages",
-      itemListElement: PACKAGES.map((p) => ({
-        "@type": "Offer",
-        price: p.price,
-        priceCurrency: "USD",
-        itemOffered: { "@type": "Service", name: p.name, description: p.desc },
       })),
     },
     {
@@ -82,13 +77,18 @@ const jsonLd = {
       })),
     },
   ],
-};
+});
 
-export default function Page() {
+export default async function Page() {
+  const [services, categories, settings] = await Promise.all([
+    serverGet<Service[]>("/services", { status: "active", limit: 100, sortBy: "sortOrder", sortOrder: "asc" }),
+    serverGet<ServiceCategory[]>("/service-categories/tree"),
+    serverGet<PublicSettings>("/settings/public"),
+  ]);
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <ServicesPage />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(buildJsonLd(services ?? [])) }} />
+      <ServicesPage services={services ?? []} categories={categories ?? []} settings={settings} />
     </>
   );
 }

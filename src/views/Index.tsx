@@ -11,7 +11,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { BookingModal } from "@/components/BookingModal";
+import { BookingModal } from "@/features/bookings/BookingModal";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { FAQS, SITE } from "@/lib/site";
@@ -61,15 +61,12 @@ const perks = [
 
 const Index = () => {
   const [bookingOpen, setBookingOpen] = useState(false);
-  const [selectedService, setSelectedService] = useState("");
-  const openBooking = (service = "") => {
-    setSelectedService(service);
-    setBookingOpen(true);
-  };
+  // home service cards are static marketing copy until F5 → the wizard starts at "choose a service"
+  const openBooking = (_service?: string) => setBookingOpen(true);
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-clip">
-      <BookingModal open={bookingOpen} onOpenChange={setBookingOpen} preSelectedService={selectedService} />
+      <BookingModal open={bookingOpen} onOpenChange={setBookingOpen} />
 
       <SiteHeader onBook={() => openBooking()} />
 

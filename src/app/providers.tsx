@@ -6,7 +6,6 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ConfirmProvider } from "@/components/common/ConfirmDialog";
-import { AppProvider } from "@/context/AppContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { getStatus } from "@/lib/api/errors";
 
@@ -34,11 +33,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <TooltipProvider delayDuration={200}>
           <AuthProvider>
             <ConfirmProvider>
-              {/* AppProvider = legacy mock store; removed as modules move to the API (F3). */}
-              <AppProvider>
-                {children}
-                <Toaster richColors closeButton position="top-right" />
-              </AppProvider>
+              {children}
+              <Toaster richColors closeButton position="top-right" />
             </ConfirmProvider>
           </AuthProvider>
         </TooltipProvider>

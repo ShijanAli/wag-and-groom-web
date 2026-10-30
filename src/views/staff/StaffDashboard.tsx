@@ -1,292 +1,232 @@
 "use client";
 
-import { NotificationBell } from "@/components/common/NotificationBell";
-import { UserMenu } from "@/components/common/UserMenu";
-
 import { useState } from "react";
-import { Dog, Clock, CheckCircle2, Play, Camera, Upload, Calendar, User, FileText, AlertCircle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { format } from "date-fns";
+import { CalendarClock, CalendarDays, CheckCheck, Clock, Eye, PawPrint, Phone, PlayCircle, StickyNote } from "lucide-react";
+import { DataTablePagination } from "@/components/common/data-table";
+import { EmptyState } from "@/components/common/EmptyState";
+import { Modal } from "@/components/common/Modal";
+import { PanelHeader } from "@/components/common/PanelHeader";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/context/AuthContext";
+import { useListParams } from "@/hooks/use-list-params";
+import { useTabParam } from "@/hooks/use-tab-param";
+import { fullName } from "@/lib/auth";
+import { formatDay, formatTime, toApiDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { ProfileSettings } from "@/features/auth/ProfileSettings";
+import { useStaffBookings } from "@/features/bookings/api";
+import { BookingBadges, BookingDetail, bookingDay } from "@/features/bookings/components";
+import { StatusActions } from "@/features/bookings/StatusActions";
+import { WEEKDAYS, WEEK_ORDER, useMySchedule } from "@/features/staff/api";
+import type { Booking } from "@/types/models";
 
-interface Appointment {
-  id: string;
-  pet: string;
-  breed: string;
-  owner: string;
-  service: string;
-  time: string;
-  status: "Scheduled" | "In Progress" | "Completed";
-  notes: string;
-  photos: string[];
-}
-
-const initialAppointments: Appointment[] = [
-  { id: "a1", pet: "Buddy", breed: "Golden Retriever", owner: "Sarah Johnson", service: "Full Grooming", time: "10:00 AM", status: "Scheduled", notes: "", photos: [] },
-  { id: "a2", pet: "Luna", breed: "Siberian Husky", owner: "James Kim", service: "Pet Spa Treatment", time: "11:30 AM", status: "Scheduled", notes: "", photos: [] },
-  { id: "a3", pet: "Max", breed: "Labrador", owner: "Emily Davis", service: "Basic Grooming", time: "1:00 PM", status: "Scheduled", notes: "", photos: [] },
-  { id: "a4", pet: "Bella", breed: "Poodle", owner: "Tom Wilson", service: "Full Grooming", time: "2:30 PM", status: "Scheduled", notes: "", photos: [] },
-  { id: "a5", pet: "Charlie", breed: "Beagle", owner: "Anna Lee", service: "Dog Walking", time: "9:00 AM", status: "Completed", notes: "Great walk, very energetic today!", photos: [] },
-];
-
-const statusColors: Record<string, string> = {
-  Scheduled: "bg-accent/10 text-accent border-accent/20",
-  "In Progress": "bg-warning/10 text-warning border-warning/20",
-  Completed: "bg-success/10 text-success border-success/20",
-};
-
-const statusIcon: Record<string, React.ReactNode> = {
-  Scheduled: <Clock className="w-3.5 h-3.5" />,
-  "In Progress": <Play className="w-3.5 h-3.5" />,
-  Completed: <CheckCircle2 className="w-3.5 h-3.5" />,
-};
+const TABS = ["today", "upcoming", "history", "schedule", "profile"] as const;
 
 export default function StaffDashboard() {
-  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
-  const [selectedAppointment, setSelectedAppointment] = useState<string | null>(null);
-  const [noteInputs, setNoteInputs] = useState<Record<string, string>>({});
-  const { toast } = useToast();
-
-  const todayDate = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-
-  const scheduled = appointments.filter((a) => a.status === "Scheduled");
-  const inProgress = appointments.filter((a) => a.status === "In Progress");
-  const completed = appointments.filter((a) => a.status === "Completed");
-
-  const updateStatus = (id: string, status: Appointment["status"]) => {
-    setAppointments((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, status } : a))
-    );
-    toast({ title: `Status updated to ${status}`, description: `Appointment has been marked as ${status.toLowerCase()}.` });
-  };
-
-  const saveNotes = (id: string) => {
-    const note = noteInputs[id];
-    if (!note?.trim()) return;
-    setAppointments((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, notes: note } : a))
-    );
-    toast({ title: "Notes saved", description: "Grooming notes have been updated." });
-  };
-
-  const handlePhotoUpload = (id: string) => {
-    // Simulate photo upload
-    const fakeUrl = `https://placehold.co/300x300/f5f0eb/d4a853?text=Pet+Photo+${Date.now() % 100}`;
-    setAppointments((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, photos: [...a.photos, fakeUrl] } : a))
-    );
-    toast({ title: "Photo uploaded", description: "Pet photo has been added to this appointment." });
-  };
-
-  const selected = appointments.find((a) => a.id === selectedAppointment);
+  const { user } = useAuth();
+  const [tab, setTab] = useTabParam(TABS, "today");
+  const [detail, setDetail] = useState<Booking | null>(null);
 
   return (
     <div className="min-h-screen bg-muted/30">
-      {/* Header */}
-      <header className="bg-card border-b border-border sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-              <Dog className="w-5 h-5 text-primary-foreground" />
-            </div>
+      <PanelHeader home="/staff" badge="Staff panel" profileHref="/staff?tab=profile" />
+      <main className="container mx-auto space-y-8 px-4 py-8">
+        <div>
+          <h1 className="font-display text-3xl font-bold">Good {greeting()}, {user?.firstName}</h1>
+          <p className="text-muted-foreground">{format(new Date(), "EEEE, d MMMM yyyy")}</p>
+        </div>
+
+        <Stats />
+
+        <Tabs value={tab} onValueChange={setTab} className="space-y-6">
+          <TabsList className="h-auto flex-wrap">
+            <TabsTrigger value="today">Today</TabsTrigger>
+            <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
+            <TabsTrigger value="schedule">My hours</TabsTrigger>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+          </TabsList>
+          <TabsContent value="today">{tab === "today" && <AppointmentList scope="today" onOpen={setDetail} />}</TabsContent>
+          <TabsContent value="upcoming">{tab === "upcoming" && <AppointmentList scope="upcoming" onOpen={setDetail} />}</TabsContent>
+          <TabsContent value="history">{tab === "history" && <AppointmentList scope="history" onOpen={setDetail} />}</TabsContent>
+          <TabsContent value="schedule">{tab === "schedule" && <MyHours />}</TabsContent>
+          <TabsContent value="profile">{tab === "profile" && <ProfileSettings />}</TabsContent>
+        </Tabs>
+      </main>
+
+      <Modal open={!!detail} onOpenChange={(o) => !o && setDetail(null)} title="Appointment" size="lg">
+        {detail && <BookingDetail booking={detail} showCustomer />}
+      </Modal>
+    </div>
+  );
+}
+
+const greeting = () => {
+  const h = new Date().getHours();
+  return h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
+};
+
+function Stats() {
+  const today = toApiDate(new Date());
+  const day = { from: today, to: today, limit: 1 };
+  const todayAll = useStaffBookings(day);
+  const inProgress = useStaffBookings({ ...day, status: "in_progress" });
+  const done = useStaffBookings({ ...day, status: "completed" });
+  const upcoming = useStaffBookings({ from: today, status: "confirmed", limit: 1 });
+  const items = [
+    { label: "Today", value: todayAll.data?.meta.total, icon: CalendarDays, tone: "bg-primary/10 text-primary" },
+    { label: "In progress", value: inProgress.data?.meta.total, icon: PlayCircle, tone: "bg-sky-500/10 text-sky-600" },
+    { label: "Done today", value: done.data?.meta.total, icon: CheckCheck, tone: "bg-success/10 text-success" },
+    { label: "Confirmed ahead", value: upcoming.data?.meta.total, icon: CalendarClock, tone: "bg-secondary/10 text-secondary" },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {items.map((i) => (
+        <Card key={i.label}>
+          <CardContent className="flex items-center gap-4 p-5">
+            <span className={cn("flex h-11 w-11 items-center justify-center rounded-xl", i.tone)}>
+              <i.icon className="h-5 w-5" />
+            </span>
             <div>
-              <h1 className="font-display text-xl font-bold text-foreground">Staff Panel</h1>
-              <p className="text-xs text-muted-foreground">{todayDate}</p>
+              {i.value === undefined ? <Skeleton className="mb-1 h-7 w-8" /> : <p className="text-2xl font-bold">{i.value}</p>}
+              <p className="text-xs text-muted-foreground">{i.label}</p>
             </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <NotificationBell />
-            <UserMenu />
-          </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function AppointmentList({ scope, onOpen }: { scope: "today" | "upcoming" | "history"; onOpen: (b: Booking) => void }) {
+  const list = useListParams({ defaults: { limit: 10 } });
+  const today = toApiDate(new Date());
+  const tomorrow = toApiDate(new Date(Date.now() + 864e5));
+  const range =
+    scope === "today"
+      ? { from: today, to: today, sortBy: "bookingDate", sortOrder: "asc" as const }
+      : scope === "upcoming"
+        ? { from: tomorrow, sortBy: "bookingDate", sortOrder: "asc" as const }
+        : { to: today, sortBy: "bookingDate", sortOrder: "desc" as const };
+  const query = useStaffBookings({ ...list.params, ...range });
+  const rows = sortByTime(query.data?.data ?? [], range.sortOrder);
+
+  if (query.isPending) return <div className="space-y-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>;
+  if (!rows.length)
+    return (
+      <EmptyState
+        icon={CalendarDays}
+        title={scope === "today" ? "Nothing booked for today" : scope === "upcoming" ? "No upcoming appointments" : "No past appointments"}
+        description={scope === "today" ? "Enjoy the calm — new bookings show up here automatically." : undefined}
+        className="bg-card"
+      />
+    );
+
+  return (
+    <div className={cn("space-y-3 transition-opacity", query.isFetching && "opacity-60")}>
+      {rows.map((b) => (
+        <Card key={b.id} className={cn(b.status === "in_progress" && "border-sky-500/50 ring-1 ring-sky-500/20")}>
+          <CardContent className="flex flex-col gap-4 p-5 md:flex-row md:items-center">
+            <div className="flex w-24 shrink-0 flex-col md:items-center md:text-center">
+              <span className="text-lg font-bold">{formatTime(b.startTime)}</span>
+              <span className="text-xs text-muted-foreground">{scope === "today" ? `until ${formatTime(b.endTime)}` : bookingDay(b, "EEE, d MMM")}</span>
+            </div>
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-semibold">{b.service.name}</h3>
+                <BookingBadges booking={b} />
+              </div>
+              <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                <li className="flex items-center gap-1.5">
+                  <PawPrint className="h-3.5 w-3.5" /> {b.pet.name} · {b.pet.petType.name}
+                </li>
+                {b.user && <li>{fullName(b.user)}</li>}
+                {b.user?.phone && (
+                  <li>
+                    <a href={`tel:${b.user.phone}`} className="flex items-center gap-1.5 hover:text-primary">
+                      <Phone className="h-3.5 w-3.5" /> {b.user.phone}
+                    </a>
+                  </li>
+                )}
+                <li className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" /> {b.service.durationMinutes} min
+                </li>
+              </ul>
+              {b.customerNote && (
+                <p className="flex items-start gap-1.5 rounded-lg bg-warning/10 px-3 py-2 text-sm">
+                  <StickyNote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" /> {b.customerNote}
+                </p>
+              )}
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <Button size="sm" variant="ghost" onClick={() => onOpen(b)} aria-label={`Details ${b.bookingNo}`}>
+                <Eye className="h-4 w-4" />
+              </Button>
+              <StatusActions booking={b} />
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+      {query.data && query.data.meta.totalPages > 1 && (
+        <div className="overflow-hidden rounded-xl border bg-card">
+          <DataTablePagination meta={query.data.meta} onChange={list.setParams} />
         </div>
-      </header>
+      )}
+    </div>
+  );
+}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: "Scheduled", count: scheduled.length, icon: Clock, color: "text-accent" },
-            { label: "In Progress", count: inProgress.length, icon: Play, color: "text-warning" },
-            { label: "Completed", count: completed.length, icon: CheckCircle2, color: "text-success" },
-            { label: "Total Today", count: appointments.length, icon: Calendar, color: "text-primary" },
-          ].map((s) => (
-            <Card key={s.label} className="border-border">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg bg-muted flex items-center justify-center ${s.color}`}>
-                  <s.icon className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-card-foreground">{s.count}</p>
-                  <p className="text-xs text-muted-foreground">{s.label}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+/** The API sorts by date; order same-day appointments by start time too. */
+const sortByTime = (rows: Booking[], order: "asc" | "desc") =>
+  [...rows].sort((a, b) => {
+    const k = `${a.bookingDate} ${a.startTime}`.localeCompare(`${b.bookingDate} ${b.startTime}`);
+    return order === "asc" ? k : -k;
+  });
 
-        <div className="grid lg:grid-cols-5 gap-6">
-          {/* Appointment List */}
-          <div className="lg:col-span-2 space-y-4">
-            <Tabs defaultValue="all">
-              <TabsList className="w-full">
-                <TabsTrigger value="all" className="flex-1">All ({appointments.length})</TabsTrigger>
-                <TabsTrigger value="scheduled" className="flex-1">Queue ({scheduled.length})</TabsTrigger>
-                <TabsTrigger value="done" className="flex-1">Done ({completed.length})</TabsTrigger>
-              </TabsList>
-
-              {["all", "scheduled", "done"].map((tab) => {
-                const list = tab === "all" ? appointments : tab === "scheduled" ? [...scheduled, ...inProgress] : completed;
-                return (
-                  <TabsContent key={tab} value={tab} className="space-y-2 mt-3">
-                    {list.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground text-sm">
-                        <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                        No appointments in this category
-                      </div>
-                    )}
-                    {list.map((appt) => (
-                      <Card
-                        key={appt.id}
-                        className={`cursor-pointer transition-all border-border hover:border-primary/40 hover:shadow-sm ${selectedAppointment === appt.id ? "border-primary ring-1 ring-primary/20" : ""}`}
-                        onClick={() => setSelectedAppointment(appt.id)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                                {appt.pet[0]}
-                              </div>
-                              <div>
-                                <p className="font-semibold text-card-foreground text-sm">{appt.pet}</p>
-                                <p className="text-xs text-muted-foreground">{appt.breed}</p>
-                              </div>
-                            </div>
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${statusColors[appt.status]}`}>
-                              {statusIcon[appt.status]}
-                              {appt.status}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{appt.service}</span>
-                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{appt.time}</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">Owner: {appt.owner}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </TabsContent>
-                );
-              })}
-            </Tabs>
-          </div>
-
-          {/* Detail Panel */}
-          <div className="lg:col-span-3">
-            {!selected ? (
-              <Card className="border-border h-full flex items-center justify-center min-h-[400px]">
-                <div className="text-center text-muted-foreground">
-                  <Dog className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p className="font-medium">Select an appointment</p>
-                  <p className="text-sm">Click on an appointment to view details and manage it</p>
-                </div>
-              </Card>
-            ) : (
-              <Card className="border-border">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-card-foreground font-display flex items-center gap-2">
-                        <Dog className="w-5 h-5 text-primary" />
-                        {selected.pet}
-                      </CardTitle>
-                      <CardDescription>{selected.breed} • Owner: {selected.owner}</CardDescription>
-                    </div>
-                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${statusColors[selected.status]}`}>
-                      {statusIcon[selected.status]}
-                      {selected.status}
-                    </span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Service Info */}
-                  <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Service</p>
-                      <p className="font-medium text-card-foreground text-sm">{selected.service}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Time</p>
-                      <p className="font-medium text-card-foreground text-sm">{selected.time}</p>
-                    </div>
-                  </div>
-
-                  {/* Status Actions */}
-                  <div>
-                    <p className="text-sm font-medium text-card-foreground mb-2">Update Status</p>
-                    <div className="flex flex-wrap gap-2">
-                      {selected.status === "Scheduled" && (
-                        <Button size="sm" onClick={() => updateStatus(selected.id, "In Progress")} className="gap-1.5">
-                          <Play className="w-3.5 h-3.5" /> Start Service
-                        </Button>
-                      )}
-                      {selected.status === "In Progress" && (
-                        <Button size="sm" onClick={() => updateStatus(selected.id, "Completed")} className="gap-1.5 bg-success hover:bg-success/90 text-success-foreground">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Mark Complete
-                        </Button>
-                      )}
-                      {selected.status === "Completed" && (
-                        <Badge variant="secondary" className="text-success py-1.5 px-3">
-                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Service completed
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Notes */}
-                  <div>
-                    <p className="text-sm font-medium text-card-foreground mb-2 flex items-center gap-1.5">
-                      <FileText className="w-4 h-4" /> Grooming Notes
-                    </p>
-                    <Textarea
-                      placeholder="Add grooming notes, special observations, product used..."
-                      value={noteInputs[selected.id] ?? selected.notes}
-                      onChange={(e) => setNoteInputs((prev) => ({ ...prev, [selected.id]: e.target.value }))}
-                      className="min-h-[80px] bg-background"
-                    />
-                    <Button size="sm" variant="outline" className="mt-2" onClick={() => saveNotes(selected.id)}>
-                      Save Notes
-                    </Button>
-                  </div>
-
-                  {/* Photos */}
-                  <div>
-                    <p className="text-sm font-medium text-card-foreground mb-2 flex items-center gap-1.5">
-                      <Camera className="w-4 h-4" /> Pet Photos
-                    </p>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
-                      {selected.photos.map((url, i) => (
-                        <div key={i} className="aspect-square rounded-lg overflow-hidden border border-border">
-                          <img src={url} alt={`Pet photo ${i + 1}`} className="w-full h-full object-cover" />
-                        </div>
-                      ))}
-                      <button
-                        onClick={() => handlePhotoUpload(selected.id)}
-                        className="aspect-square rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
-                      >
-                        <Upload className="w-5 h-5 mb-1" />
-                        <span className="text-[10px]">Upload</span>
-                      </button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
-      </div>
+function MyHours() {
+  const q = useMySchedule();
+  if (q.isPending) return <Skeleton className="h-72 rounded-xl" />;
+  const byDay = new Map((q.data?.schedules ?? []).filter((s) => s.isActive).map((s) => [s.dayOfWeek, s]));
+  const today = new Date().getDay();
+  return (
+    <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <Card>
+        <CardContent className="divide-y p-0">
+          {WEEK_ORDER.map((d) => {
+            const s = byDay.get(d);
+            return (
+              <div key={d} className={cn("flex items-center justify-between px-5 py-3.5 text-sm", d === today && "bg-primary/5")}>
+                <span className="font-medium">
+                  {WEEKDAYS[d]} {d === today && <span className="ml-1 text-xs text-primary">(today)</span>}
+                </span>
+                <span className={s ? "font-medium" : "text-muted-foreground"}>{s ? `${formatTime(s.startTime)} – ${formatTime(s.endTime)}` : "Day off"}</span>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="space-y-3 p-5">
+          <h3 className="font-semibold">Upcoming days off</h3>
+          {q.data?.upcomingBlockedDates.length ? (
+            <ul className="space-y-2 text-sm">
+              {q.data.upcomingBlockedDates.map((b) => (
+                <li key={b.id} className="flex justify-between gap-3">
+                  <span>{formatDay(b.date, "EEE, d MMM")}</span>
+                  <span className="truncate text-muted-foreground">{b.staffId ? b.reason ?? "Leave" : `Closed${b.reason ? ` · ${b.reason}` : ""}`}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">None scheduled.</p>
+          )}
+          <p className="text-xs text-muted-foreground">Hours are managed by your admin.</p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
