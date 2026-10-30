@@ -423,3 +423,170 @@ export interface FavoritePet extends Omit<AdoptionPet, "images" | "isFavorite"> 
   primaryImage: string | null;
   favoritedAt: ISODate;
 }
+
+/* ───────────────────────── content (F5) ───────────────────────── */
+
+export type ReviewStatus = "pending" | "approved" | "rejected";
+
+export interface ReviewImage {
+  id: number;
+  image: string;
+}
+
+/** /me/reviews and /reviews (admin adds `user`) */
+export interface Review {
+  id: number;
+  bookingId: number;
+  userId: number;
+  serviceId: number;
+  rating: number;
+  title: string | null;
+  comment: string | null;
+  status: ReviewStatus;
+  adminReply: string | null;
+  repliedAt: ISODate | null;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+  service: { id: number; name: string; slug: string };
+  booking: { id: number; bookingNo: string; bookingDate: ISODate };
+  images: ReviewImage[];
+  user?: { id: number; firstName: string; lastName: string; email: string };
+}
+
+/** Public: GET /services/:slug/reviews */
+export interface PublicReview {
+  id: number;
+  rating: number;
+  title: string | null;
+  comment: string | null;
+  adminReply: string | null;
+  repliedAt: ISODate | null;
+  createdAt: ISODate;
+  user: { firstName: string; profilePhoto: string | null };
+  images: ReviewImage[];
+}
+
+export interface RatingSummary {
+  serviceId: number;
+  averageRating: number;
+  totalReviews: number;
+  breakdown: Record<"1" | "2" | "3" | "4" | "5", number>;
+}
+
+export interface GalleryAlbum {
+  id: number;
+  title: string;
+  slug: string;
+  description: string | null;
+  coverImage: string | null;
+  /** coverImage, or the first item's image */
+  cover: string | null;
+  sortOrder: number;
+  status: ActiveStatus;
+  itemCount: number;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+export type MediaType = "image" | "video";
+
+export interface GalleryItem {
+  id: number;
+  albumId: number | null;
+  serviceId: number | null;
+  title: string | null;
+  caption: string | null;
+  mediaType: MediaType;
+  fileUrl: string;
+  thumbnailUrl: string | null;
+  beforeImageUrl: string | null;
+  altText: string | null;
+  isFeatured: boolean;
+  sortOrder: number;
+  status: ActiveStatus;
+  createdAt: ISODate;
+  album: { id: number; title: string; slug: string } | null;
+  service: { id: number; name: string; slug: string } | null;
+}
+
+export interface BlogCategory {
+  id: number;
+  name: string;
+  slug: string;
+  status: ActiveStatus;
+  createdAt: ISODate;
+}
+
+export type PostStatus = "draft" | "published";
+
+export interface BlogPost {
+  id: number;
+  categoryId: number;
+  authorId: number;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  coverImage: string | null;
+  status: PostStatus;
+  publishedAt: ISODate | null;
+  metaTitle: string | null;
+  metaDescription: string | null;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+  category: { id: number; name: string; slug: string };
+  author: { id: number; firstName: string; lastName: string; profilePhoto: string | null };
+  /** Detail only */
+  content?: string;
+  readingTimeMinutes?: number;
+}
+
+export interface Faq {
+  id: number;
+  question: string;
+  answer: string;
+  category: string | null;
+  sortOrder: number;
+  status: ActiveStatus;
+  createdAt: ISODate;
+}
+
+export interface FaqGroup {
+  category: string | null;
+  faqs: Faq[];
+}
+
+export interface Testimonial {
+  id: number;
+  userId: number | null;
+  adoptionId: number | null;
+  name: string;
+  content: string;
+  image: string | null;
+  rating: number;
+  isFeatured: boolean;
+  status: ActiveStatus;
+  createdAt: ISODate;
+}
+
+export type ContactStatus = "new" | "read" | "replied";
+
+export interface ContactMessage {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  subject: string;
+  message: string;
+  status: ContactStatus;
+  createdAt: ISODate;
+}
+
+export type SubscriptionStatus = "subscribed" | "unsubscribed";
+
+export interface NewsletterSubscriber {
+  id: number;
+  email: string;
+  status: SubscriptionStatus;
+  subscribedAt: ISODate;
+  unsubscribedAt: ISODate | null;
+}

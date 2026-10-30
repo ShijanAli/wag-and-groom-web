@@ -9,11 +9,11 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { cdn } from "@/lib/image";
-import { SITE } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { ageLabel, useFavoriteIds, useMyApplications } from "@/features/adoption/api";
 import { ApplyModal } from "@/features/adoption/ApplyModal";
 import { FavoriteButton, GenderIcon, feeLabel } from "@/features/adoption/components";
+import { useContactInfo } from "@/features/settings/api";
 import type { AdoptionPet } from "@/types/models";
 
 export default function AdoptionPetPage({ pet }: { pet: AdoptionPet }) {
@@ -127,9 +127,7 @@ export default function AdoptionPetPage({ pet }: { pet: AdoptionPet }) {
               <ApplyAction pet={pet} />
             </div>
 
-            <a href={`tel:${SITE.phoneHref}`} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary">
-              <Phone className="h-4 w-4" /> Questions about {pet.name}? Call {SITE.phone}
-            </a>
+            <CallLink name={pet.name} />
           </div>
         </div>
 
@@ -186,5 +184,14 @@ function ApplyAction({ pet }: { pet: AdoptionPet }) {
       {/* stays mounted after submit so the success screen isn't torn down when the button flips to "Applied" */}
       <ApplyModal pet={pet} open={open} onOpenChange={setOpen} />
     </>
+  );
+}
+
+function CallLink({ name }: { name: string }) {
+  const c = useContactInfo();
+  return (
+    <a href={`tel:${c.phoneHref}`} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary">
+      <Phone className="h-4 w-4" /> Questions about {name}? Call {c.phone}
+    </a>
   );
 }

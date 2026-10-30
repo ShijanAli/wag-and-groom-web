@@ -6,16 +6,15 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, BadgeCheck, CalendarDays, Camera, ChevronRight, Clock, PawPrint, Phone, ShieldCheck, Sparkles, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { BookingModal } from "@/features/bookings/BookingModal";
 import { ServiceCard } from "@/features/catalog/ServiceCard";
 import { EmptyState } from "@/components/common/EmptyState";
 import { formatMoney } from "@/lib/format";
-import type { PublicSettings, Service, ServiceCategory } from "@/types/models";
+import type { Faq, PublicSettings, Service, ServiceCategory } from "@/types/models";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
-import { SERVICE_FAQS } from "@/lib/services";
-import { SITE } from "@/lib/site";
+import { FaqAccordion } from "@/components/site/FaqAccordion";
+import { useContactInfo } from "@/features/settings/api";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 28 },
@@ -34,6 +33,7 @@ export interface ServicesPageProps {
   services: Service[];
   categories: ServiceCategory[];
   settings: PublicSettings | null;
+  faqs: Faq[];
 }
 
 /** Group services under their top-level category (sub-category services roll up to the parent). */
@@ -48,7 +48,8 @@ function groupByRoot(services: Service[], categories: ServiceCategory[]) {
     .filter((g) => g.services.length > 0);
 }
 
-export default function ServicesPage({ services, categories, settings }: ServicesPageProps) {
+export default function ServicesPage({ services, categories, settings, faqs }: ServicesPageProps) {
+  const contact = useContactInfo(settings);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<number | undefined>();
   const openBooking = (serviceId?: number) => {
@@ -187,7 +188,7 @@ export default function ServicesPage({ services, categories, settings }: Service
         </section>
 
         {/* FAQ */}
-        <section id="faq" className="py-24 bg-muted/50 scroll-mt-16">
+        {faqs.length > 0 && <section id="faq" className="py-24 bg-muted/50 scroll-mt-16">
           <div className="container mx-auto px-4 grid lg:grid-cols-[1fr_1.4fr] gap-14">
             <motion.div {...reveal} custom={0} className="lg:sticky lg:top-40 self-start space-y-4">
               <span className="text-primary font-semibold text-sm uppercase tracking-[0.2em]">Service FAQ</span>
@@ -196,17 +197,10 @@ export default function ServicesPage({ services, categories, settings }: Service
               <Button variant="outline" className="rounded-full gap-2 bg-card" asChild><Link href="/#contact">Ask our team <ArrowRight className="w-4 h-4" /></Link></Button>
             </motion.div>
             <motion.div {...reveal} custom={1}>
-              <Accordion type="single" collapsible defaultValue="item-0" className="space-y-3">
-                {SERVICE_FAQS.map((f, i) => (
-                  <AccordionItem key={f.q} value={`item-${i}`} className="bg-card border border-border rounded-2xl px-6 data-[state=open]:shadow-lg data-[state=open]:border-primary/40 transition-all">
-                    <AccordionTrigger className="text-left font-semibold hover:no-underline py-5">{f.q}</AccordionTrigger>
-                    <AccordionContent className="text-muted-foreground leading-relaxed">{f.a}</AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
+              <FaqAccordion faqs={faqs} />
             </motion.div>
           </div>
-        </section>
+        </section>}
 
         {/* CTA */}
         <section className="px-4 py-24">
@@ -219,7 +213,7 @@ export default function ServicesPage({ services, categories, settings }: Service
               <div className="flex flex-wrap gap-3 pt-2">
                 <Button size="lg" className="rounded-full h-14 px-8 gap-2 shadow-xl shadow-primary/30" onClick={() => openBooking()}><CalendarDays className="w-5 h-5" /> Book now</Button>
                 <Button size="lg" variant="outline" className="rounded-full h-14 px-8 gap-2 bg-transparent text-background border-background/40 hover:bg-background hover:text-foreground" asChild>
-                  <a href={`tel:${SITE.phoneHref}`}><Phone className="w-4 h-4" /> {SITE.phone}</a>
+                  <a href={`tel:${contact.phoneHref}`}><Phone className="w-4 h-4" /> {contact.phone}</a>
                 </Button>
               </div>
             </div>

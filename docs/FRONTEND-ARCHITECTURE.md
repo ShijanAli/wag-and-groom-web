@@ -146,3 +146,30 @@ What you get with no extra code:
   existing pet, use the Photos dialog (add, make cover, remove).
 - **API images** use plain `<img loading="lazy">` with `cdn(url, w, h)`, which asks Cloudinary for a resized
   `f_auto,q_auto` version.
+
+## Website content (F5)
+
+**Public pages are server-rendered from the API** (ISR via `serverGet` / `serverList`):
+
+| Route | Data | Notes |
+| --- | --- | --- |
+| `/` | services, featured gallery, featured testimonials, FAQs, latest posts, adoptable pets, settings | Trust-strip numbers are real (service count, weighted rating, adoptable pets, cancel window). Sections with no data are hidden. JSON-LD in BDT. |
+| `/services/[slug]` | service, rating summary, service gallery, related services | Reviews are client-paginated (`ServiceReviews`); the summary is refreshed on mount, so an ISR page is never stale for long. `AggregateRating` + `Review` JSON-LD. |
+| `/blog`, `/blog/[slug]` | posts, categories | Category chips and pagination are plain links (crawlable). Drafts and scheduled posts 404 publicly. |
+| `/gallery` | albums, items | First page SSR, then "Load more" (`useInfiniteQuery` seeded with the server page). Lightbox: ← → keys, before/after toggle, YouTube/Vimeo/mp4. |
+| `/newsletter/unsubscribe` | — | Landing page of the signed link in newsletter emails. |
+
+`PublicShell` wraps server pages with the header (Book button → booking wizard) and footer. Contact details everywhere come from `contactInfo(settings)` / `useContactInfo()` (settings → `SITE` fallback), so the admin changes them in one place.
+
+**Shared building blocks added**
+
+- `Markdown` — safe renderer (raw HTML ignored, external links open in a new tab), Tailwind Typography styles.
+- `MarkdownField` / `MarkdownEditor` — toolbar, ⌘B/⌘I/⌘K, inline image upload, Preview tab, word count.
+- `Stars`, `RatingInput`, `RatingField`, `RatingBreakdown`.
+- `TableTabs` — pill tabs bound to a list param (moderation queues, inboxes).
+- `useSortable` — dependency-free drag & drop + Alt+arrow keyboard reordering.
+- `SectionHeading`, `FaqAccordion` (+ `faqJsonLd`), `NewsletterForm`, `ContactForm`, `BlogCard`, `GalleryGrid`, `ReviewBody`.
+
+**Admin**: Reviews (pending queue, approve/reject, public reply), Gallery (photo grid with drop-to-upload, feature, reorder; albums), Blog (posts/categories tabs + full-page editor at `/admin/blog/new` and `/admin/blog/[id]` with publish/schedule and a Google preview), FAQs, Testimonials, Messages (unread dot, opening marks read, prefilled mailto reply), Newsletter (CSV export via an authenticated blob download).
+
+**Customer**: completed bookings show "Write a review" / "Your review · N★"; the new Reviews tab lists them with moderation status. Approved reviews are locked (the backend refuses edits) — the UI hides Edit instead of failing.

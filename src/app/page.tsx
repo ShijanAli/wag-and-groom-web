@@ -1,24 +1,17 @@
 import type { Metadata } from "next";
-import Index from "@/views/Index";
-import { FAQS, SERVICE_LIST, SITE } from "@/lib/site";
+import Index, { type HomeData } from "@/views/Index";
+import { serverGet, serverList } from "@/lib/api/server";
+import { SITE, contactInfo } from "@/lib/site";
+import { faqJsonLd } from "@/components/site/FaqAccordion";
+import type { AdoptionPet, BlogPost, Faq, GalleryItem, PublicSettings, Service, Testimonial } from "@/types/models";
 
-const title = "Professional Pet Grooming, Walking & Spa in San Francisco";
+const title = "Pet Grooming, Spa, Walking & Adoption";
 const ogImage = "/images/hero-grooming.jpg";
 
 export const metadata: Metadata = {
   title: { absolute: `${SITE.name} | ${title}` },
   description: SITE.description,
-  keywords: [
-    "pet grooming San Francisco",
-    "dog grooming",
-    "dog walking",
-    "pet sitting",
-    "pet daycare",
-    "pet spa",
-    "cat grooming",
-    "mobile pet grooming",
-    "book pet grooming online",
-  ],
+  keywords: ["pet grooming", "dog grooming Dhaka", "cat grooming", "pet spa", "dog walking", "pet sitting", "pet daycare", "adopt a dog", "adopt a cat", "book pet grooming online"],
   alternates: { canonical: "/" },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
   openGraph: {
@@ -29,73 +22,91 @@ export const metadata: Metadata = {
     description: SITE.description,
     images: [{ url: ogImage, width: 1400, height: 933, alt: "Happy golden retriever being washed by a PetPlex groomer" }],
   },
-  twitter: {
-    card: "summary_large_image",
-    title: `${SITE.name} | ${title}`,
-    description: SITE.description,
-    images: [ogImage],
-  },
+  twitter: { card: "summary_large_image", title: `${SITE.name} | ${title}`, description: SITE.description, images: [ogImage] },
 };
 
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "WebSite",
-      "@id": `${SITE.url}/#website`,
-      url: SITE.url,
-      name: SITE.name,
-      description: SITE.description,
-      inLanguage: "en-US",
-    },
-    {
-      "@type": "LocalBusiness",
-      "@id": `${SITE.url}/#business`,
-      name: SITE.name,
-      description: SITE.description,
-      url: SITE.url,
-      image: `${SITE.url}${ogImage}`,
-      telephone: SITE.phone,
-      email: SITE.email,
-      priceRange: "$$",
-      address: {
-        "@type": "PostalAddress",
-        streetAddress: SITE.address.street,
-        addressLocality: SITE.address.city,
-        addressRegion: SITE.address.region,
-        addressCountry: SITE.address.country,
+/** Marketing content changes a few times a day at most → ISR, refreshed every 5 minutes. */
+export const revalidate = 300;
+
+async function getHomeData(): Promise<HomeData> {
+  const [services, featuredGallery, latestGallery, testimonials, faqs, posts, pets, settings] = await Promise.all([
+    serverGet<Service[]>("/services", { status: "active", limit: 100, sortBy: "sortOrder", sortOrder: "asc" }),
+    serverGet<GalleryItem[]>("/gallery/items", { isFeatured: true, limit: 7 }),
+    serverGet<GalleryItem[]>("/gallery/items", { limit: 7 }),
+    serverGet<Testimonial[]>("/testimonials", { isFeatured: true, limit: 6, sortBy: "createdAt", sortOrder: "desc" }),
+    serverGet<Faq[]>("/faqs", { limit: 6 }),
+    serverGet<BlogPost[]>("/blog/posts", { limit: 3 }),
+    serverList<AdoptionPet>("/adoption-pets", { status: "available", limit: 4 }),
+    serverGet<PublicSettings>("/settings/public"),
+  ]);
+
+  const all = services ?? [];
+  const reviews = all.reduce((n, s) => n + s.reviewsCount, 0);
+  const avgRating = reviews ? all.reduce((sum, s) => sum + Number(s.avgRating) * s.reviewsCount, 0) / reviews : 0;
+  // featured first, then the catalog order
+  const ordered = [...all.filter((s) => s.isFeatured), ...all.filter((s) => !s.isFeatured)];
+  // too few featured photos → show the latest ones so the section never looks empty
+  const gallery = (featuredGallery?.length ?? 0) >= 4 ? featuredGallery! : (latestGallery ?? []);
+
+  return {
+    services: ordered,
+    gallery,
+    testimonials: testimonials ?? [],
+    faqs: faqs ?? [],
+    posts: posts ?? [],
+    pets: pets?.data ?? [],
+    settings,
+    stats: { services: all.length, reviews, avgRating, adoptablePets: pets?.meta.total ?? 0 },
+  };
+}
+
+const buildJsonLd = ({ services, faqs, settings, stats }: HomeData) => {
+  const c = contactInfo(settings);
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      { "@type": "WebSite", "@id": `${SITE.url}/#website`, url: SITE.url, name: SITE.name, description: SITE.description, inLanguage: "en" },
+      {
+        "@type": "LocalBusiness",
+        "@id": `${SITE.url}/#business`,
+        name: SITE.name,
+        description: SITE.description,
+        url: SITE.url,
+        image: `${SITE.url}${ogImage}`,
+        telephone: c.phone,
+        email: c.email,
+        priceRange: "৳৳",
+        currenciesAccepted: "BDT",
+        address: { "@type": "PostalAddress", streetAddress: c.address, addressCountry: SITE.country },
+        ...(c.socials.length && { sameAs: c.socials.map((s) => s.url) }),
+        openingHoursSpecification: [
+          { "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], opens: "08:00", closes: "19:00" },
+          { "@type": "OpeningHoursSpecification", dayOfWeek: "Sunday", opens: "09:00", closes: "17:00" },
+        ],
+        ...(stats.reviews > 0 && { aggregateRating: { "@type": "AggregateRating", ratingValue: stats.avgRating.toFixed(1), reviewCount: stats.reviews } }),
+        hasOfferCatalog: {
+          "@type": "OfferCatalog",
+          name: "Pet care services",
+          itemListElement: services.map((s) => ({
+            "@type": "Offer",
+            price: Number(s.discountPrice ?? s.price),
+            priceCurrency: "BDT",
+            url: `${SITE.url}/services/${s.slug}`,
+            itemOffered: { "@type": "Service", name: s.name, description: s.shortDescription ?? undefined },
+          })),
+        },
       },
-      openingHoursSpecification: [
-        { "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], opens: "08:00", closes: "19:00" },
-        { "@type": "OpeningHoursSpecification", dayOfWeek: "Sunday", opens: "09:00", closes: "17:00" },
-      ],
-      hasOfferCatalog: {
-        "@type": "OfferCatalog",
-        name: "Pet care services",
-        itemListElement: SERVICE_LIST.map((s) => ({
-          "@type": "Offer",
-          price: s.price,
-          priceCurrency: "USD",
-          itemOffered: { "@type": "Service", name: s.name, description: s.description },
-        })),
-      },
-    },
-    {
-      "@type": "FAQPage",
-      mainEntity: FAQS.map((f) => ({
-        "@type": "Question",
-        name: f.q,
-        acceptedAnswer: { "@type": "Answer", text: f.a },
-      })),
-    },
-  ],
+      faqJsonLd(faqs),
+    ].filter(Boolean),
+  };
 };
 
-export default function Page() {
+export default async function Page() {
+  const data = await getHomeData();
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <Index />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(buildJsonLd(data)) }} />
+      <Index {...data} />
     </>
   );
 }

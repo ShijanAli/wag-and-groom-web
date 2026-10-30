@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { CalendarDays, Clock, ShieldCheck, Sparkles, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDuration, formatMoney } from "@/lib/format";
@@ -14,7 +15,7 @@ const FALLBACKS: [RegExp, string][] = [
   [/daycare|play/i, "/images/service-daycare.jpg"],
   [/spa|massage|aroma|wellness/i, "/images/service-spa.jpg"],
 ];
-const fallbackImage = (s: Service) => FALLBACKS.find(([re]) => re.test(`${s.name} ${s.category.name}`))?.[1];
+export const fallbackImage = (s: Pick<Service, "name" | "category">) => FALLBACKS.find(([re]) => re.test(`${s.name} ${s.category.name}`))?.[1];
 
 export function ServiceCard({ service: s, onBook }: { service: Service; index?: number; onBook: () => void }) {
   const image = s.image ?? fallbackImage(s);
@@ -38,7 +39,11 @@ export function ServiceCard({ service: s, onBook }: { service: Service; index?: 
 
       <div className="flex flex-1 flex-col gap-3 p-6">
         <div className="flex items-start justify-between gap-3">
-          <h3 className="font-display text-xl font-semibold leading-snug">{s.name}</h3>
+          <h3 className="font-display text-xl font-semibold leading-snug">
+            <Link href={`/services/${s.slug}`} className="hover:text-primary focus-visible:underline focus-visible:outline-none">
+              {s.name}
+            </Link>
+          </h3>
           {s.reviewsCount > 0 && (
             <span className="flex shrink-0 items-center gap-1 text-sm font-medium" aria-label={`Rated ${s.avgRating} out of 5`}>
               <Star className="h-4 w-4 fill-warning text-warning" /> {s.avgRating}

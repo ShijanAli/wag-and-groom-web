@@ -23,7 +23,7 @@ interface BaseProps {
 }
 
 /** Label/description/message wrapper shared by the choice fields below. */
-function ChoiceShell({
+export function ChoiceShell({
   name,
   label,
   description,

@@ -23,11 +23,10 @@ export function SiteHeader({ onBook }: Props) {
   const prefix = pathname === "/" ? "" : "/";
   const navLinks = [
     { label: "Home", href: "/", active: pathname === "/" },
-    { label: "Services", href: "/services", active: pathname === "/services" },
+    { label: "Services", href: "/services", active: pathname.startsWith("/services") },
     { label: "Adopt", href: "/adopt", active: pathname.startsWith("/adopt") },
-    { label: "About", href: `${prefix}#about` },
-    { label: "Gallery", href: `${prefix}#gallery` },
-    { label: "Reviews", href: `${prefix}#testimonials` },
+    { label: "Gallery", href: "/gallery", active: pathname.startsWith("/gallery") },
+    { label: "Blog", href: "/blog", active: pathname.startsWith("/blog") },
     { label: "FAQ", href: `${prefix}#faq` },
     { label: "Contact", href: `${prefix}#contact` },
   ];

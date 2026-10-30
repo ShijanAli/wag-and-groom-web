@@ -30,9 +30,11 @@ import { METHOD_LABEL, useMyPayments } from "@/features/payments/api";
 import { myPetHooks, petAge, type PetInput } from "@/features/pets/api";
 import { PetFields, petSchema, toPetForm, toPetInput, type PetForm } from "@/features/pets/PetFields";
 import { usePublicSettings } from "@/features/settings/api";
+import { BookingReviewButton, MyReviewsTab, ReviewFormModal, useMyReviewsByBooking, type ReviewTarget } from "@/features/reviews/MyReviews";
+import { useDisclosure } from "@/hooks/use-disclosure";
 import type { Booking, Payment, Pet } from "@/types/models";
 
-const TABS = ["bookings", "pets", "adoptions", "favorites", "payments", "profile"] as const;
+const TABS = ["bookings", "pets", "reviews", "adoptions", "favorites", "payments", "profile"] as const;
 const PAYABLE = (b: Booking) => ["pending", "confirmed"].includes(b.status) && ["unpaid", "partial"].includes(b.paymentStatus);
 
 export default function CustomerDashboard() {
@@ -77,6 +79,7 @@ export default function CustomerDashboard() {
           <TabsList className="h-auto flex-wrap">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="pets">My pets</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews</TabsTrigger>
             <TabsTrigger value="adoptions">Adoptions</TabsTrigger>
             <TabsTrigger value="favorites">Favourites</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
@@ -84,6 +87,7 @@ export default function CustomerDashboard() {
           </TabsList>
           <TabsContent value="bookings">{tab === "bookings" && <BookingsTab onBook={openBooking} />}</TabsContent>
           <TabsContent value="pets">{tab === "pets" && <PetsTab />}</TabsContent>
+          <TabsContent value="reviews">{tab === "reviews" && <MyReviewsTab />}</TabsContent>
           <TabsContent value="adoptions">{tab === "adoptions" && <MyAdoptionsTab />}</TabsContent>
           <TabsContent value="favorites">{tab === "favorites" && <MyFavoritesTab />}</TabsContent>
           <TabsContent value="payments">{tab === "payments" && <PaymentsTab />}</TabsContent>
@@ -154,6 +158,8 @@ function BookingsTab({ onBook }: { onBook: (serviceId?: number) => void }) {
   const { confirm } = useConfirm();
   const cutoff = settings.data?.booking_cancel_before_hours ?? 24;
   const rows = query.data?.data ?? [];
+  const reviews = useMyReviewsByBooking();
+  const reviewEditor = useDisclosure<ReviewTarget>();
 
   return (
     <div className="space-y-4">
@@ -217,6 +223,7 @@ function BookingsTab({ onBook }: { onBook: (serviceId?: number) => void }) {
                       <X className="mr-1.5 h-4 w-4" /> Cancel
                     </Button>
                   )}
+                  <BookingReviewButton booking={b} review={reviews.get(b.id)} onWrite={() => reviewEditor.open({ booking: b })} onEdit={(review) => reviewEditor.open({ review })} />
                   {["completed", "cancelled", "no_show"].includes(b.status) && (
                     <Button size="sm" variant="ghost" onClick={() => onBook(b.serviceId)}>
                       <RotateCcw className="mr-1.5 h-4 w-4" /> Book again
@@ -235,6 +242,7 @@ function BookingsTab({ onBook }: { onBook: (serviceId?: number) => void }) {
       )}
 
       <MyBookingModal bookingNo={detailNo} onClose={() => setDetailNo(null)} />
+      <ReviewFormModal target={reviewEditor.item} open={reviewEditor.isOpen} onOpenChange={reviewEditor.setOpen} />
     </div>
   );
 }
