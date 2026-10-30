@@ -1,5 +1,8 @@
 import {
   CalendarDays,
+  ClipboardList,
+  HeartHandshake,
+  Home,
   CalendarOff,
   FolderTree,
   PawPrint,
@@ -64,6 +67,20 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       },
       { title: "Pet Types", url: "/admin/pet-types", icon: PawPrint, anyOf: [P.PET_TYPE.CREATE, P.PET_TYPE.UPDATE, P.PET_TYPE.DELETE], keywords: ["animals", "species", "dog", "cat"] },
       { title: "Promotions", url: "/admin/promotions", icon: Tag, anyOf: [P.PROMOTION.VIEW], keywords: ["promo", "discount", "coupon"] },
+    ],
+  },
+  {
+    label: "Adoption",
+    items: [
+      {
+        title: "Pets for Adoption",
+        url: "/admin/adoption-pets",
+        icon: HeartHandshake,
+        anyOf: [P.ADOPTION_PET.CREATE, P.ADOPTION_PET.UPDATE, P.ADOPTION_PET.DELETE],
+        keywords: ["adopt", "rescue", "shelter"],
+      },
+      { title: "Applications", url: "/admin/adoption-applications", icon: ClipboardList, anyOf: [P.ADOPTION_APPLICATION.VIEW], keywords: ["adoption requests", "review"] },
+      { title: "Adoptions", url: "/admin/adoptions", icon: Home, anyOf: [P.ADOPTION.VIEW], keywords: ["handover", "adoption fee", "follow-up"] },
     ],
   },
   {

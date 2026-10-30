@@ -8,7 +8,7 @@ import { fullName } from "@/lib/auth";
 import { formatDateTime, formatMoney, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { METHOD_LABEL } from "@/features/payments/api";
-import type { Booking, BookingPaymentStatus } from "@/types/models";
+import type { Booking, BookingPaymentLine, BookingPaymentStatus } from "@/types/models";
 
 const PAYMENT_LABEL: Record<BookingPaymentStatus, string> = { unpaid: "Unpaid", partial: "Partly paid", paid: "Paid", refunded: "Refunded" };
 
@@ -74,8 +74,9 @@ export function BookingTimeline({ booking }: { booking: Booking }) {
   );
 }
 
-export function BookingPaymentsList({ booking }: { booking: Booking }) {
-  const lines = booking.payments ?? [];
+/** Payment / refund lines of a booking or an adoption. */
+export function PaymentLines({ payments }: { payments: BookingPaymentLine[] | undefined }) {
+  const lines = payments ?? [];
   if (!lines.length) return <p className="text-sm text-muted-foreground">No payments yet.</p>;
   return (
     <ul className="divide-y rounded-xl border">
@@ -121,7 +122,7 @@ export function BookingDetail({ booking, showCustomer = false }: { booking: Book
       <BookingTotals booking={booking} />
       <section className="space-y-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Payments</h3>
-        <BookingPaymentsList booking={booking} />
+        <PaymentLines payments={booking.payments} />
       </section>
       <section className="space-y-3">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">History</h3>

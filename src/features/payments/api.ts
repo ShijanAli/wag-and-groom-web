@@ -8,7 +8,8 @@ import { bookingKeys } from "@/features/bookings/api";
 import type { Payment, PaymentMethod } from "@/types/models";
 
 export interface CashPaymentInput {
-  bookingId: number;
+  bookingId?: number;
+  adoptionId?: number;
   amount?: number;
   method: Exclude<PaymentMethod, "sslcommerz">;
   note?: string;
@@ -27,7 +28,7 @@ export const usePayments = (params: ListParams) =>
 export const useMyPayments = (params: ListParams) =>
   useQuery({ queryKey: ["my-payments", "list", params], queryFn: () => paymentsApi.mine(params), placeholderData: (prev) => prev });
 
-const invalidate = [["payments"], ["my-payments"], bookingKeys.all];
+const invalidate = [["payments"], ["my-payments"], bookingKeys.all, ["adoptions"], ["adoption-applications"]];
 export const useRecordPayment = () => useApiMutation(paymentsApi.recordCash, { invalidate });
 export const useRefund = () =>
   useApiMutation(({ id, ...body }: { id: Id; amount?: number; reason: string }) => paymentsApi.refund(id, body), { invalidate });

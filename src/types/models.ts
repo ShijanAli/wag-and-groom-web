@@ -321,3 +321,105 @@ export interface PublicSettings {
   contact_phone: string;
   social_links: Record<string, string>;
 }
+
+/* ───────────────────────── adoption (F4) ───────────────────────── */
+
+export type AdoptionPetStatus = "available" | "pending" | "adopted" | "on_hold";
+export type ApplicationStatus = "pending" | "under_review" | "approved" | "rejected" | "cancelled";
+export type AdoptionStatus = "in_progress" | "completed" | "cancelled";
+export type HomeType = "house" | "apartment";
+
+export interface AdoptionPetImage {
+  id: number;
+  imageUrl: string;
+  isPrimary: boolean;
+  sortOrder: number;
+}
+
+export interface AdoptionPet {
+  id: number;
+  petTypeId: number;
+  name: string;
+  slug: string;
+  breed: string | null;
+  gender: PetGender;
+  ageMonths: number;
+  size: PetSize | null;
+  color: string | null;
+  description: string;
+  healthStatus: string | null;
+  isVaccinated: boolean;
+  isNeutered: boolean;
+  adoptionFee: Money;
+  status: AdoptionPetStatus;
+  isFeatured: boolean;
+  createdAt: ISODate;
+  petType: Ref;
+  _count?: { favorites: number };
+  /** list endpoint: cover image URL */
+  primaryImage?: string | null;
+  /** detail endpoint: every image, cover first */
+  images?: AdoptionPetImage[];
+  isFavorite?: boolean;
+}
+
+/** Pet summary embedded in applications / adoptions. */
+export interface AdoptionPetSummary {
+  id: number;
+  name: string;
+  slug: string;
+  status: AdoptionPetStatus;
+  adoptionFee?: Money;
+  petType: Ref;
+  images: AdoptionPetImage[];
+}
+
+export interface AdoptionApplication {
+  id: number;
+  applicationNo: string;
+  adoptionPetId: number;
+  userId: number;
+  homeType: HomeType;
+  hasYard: boolean;
+  hasOtherPets: boolean;
+  otherPetsDetails: string | null;
+  hasChildren: boolean;
+  experience: string | null;
+  reason: string;
+  status: ApplicationStatus;
+  reviewedAt: ISODate | null;
+  adminNote: string | null;
+  createdAt: ISODate;
+  adoptionPet: AdoptionPetSummary;
+  adoption: { id: number; status: AdoptionStatus; feeAmount: Money; feePaid: Money } | null;
+  user?: { id: number; firstName: string; lastName: string; email: string; phone: string | null; address: string | null };
+  reviewedBy?: { id: number; firstName: string; lastName: string } | null;
+}
+
+export interface Adoption {
+  id: number;
+  applicationId: number;
+  adoptionPetId: number;
+  userId: number;
+  status: AdoptionStatus;
+  adoptionDate: string; // YYYY-MM-DD
+  feeAmount: Money;
+  feePaid: Money;
+  feeDue: number;
+  contractFile: string | null;
+  followUpDate: string | null;
+  completedAt: ISODate | null;
+  cancelledAt: ISODate | null;
+  cancelReason: string | null;
+  createdAt: ISODate;
+  adoptionPet: AdoptionPetSummary;
+  application: { id: number; applicationNo: string };
+  user?: { id: number; firstName: string; lastName: string; email: string; phone?: string | null };
+  /** detail endpoints */
+  payments?: BookingPaymentLine[];
+}
+
+export interface FavoritePet extends Omit<AdoptionPet, "images" | "isFavorite"> {
+  primaryImage: string | null;
+  favoritedAt: ISODate;
+}

@@ -27,6 +27,8 @@ export interface PromoPreview {
   totalAmount: number;
 }
 
+export type PaymentTarget = { bookingId: number; adoptionId?: never } | { adoptionId: number; bookingId?: never };
+
 export interface PaymentSession {
   paymentId: number;
   transactionId: string;
@@ -56,7 +58,8 @@ export const bookingsApi = {
   // booking helpers
   availability: (serviceId: Id, date: string, staffId?: number) => api.get<Availability>(`/services/${serviceId}/availability`, { date, staffId }),
   validatePromo: (code: string, serviceId: number) => api.post<PromoPreview>("/promotions/validate", { code, serviceId }),
-  initPayment: (bookingId: number, currency: Currency = "BDT") => api.post<PaymentSession>("/payments/init", { bookingId, currency }),
+  /** Online payment for a booking or an adoption fee. */
+  initPayment: (target: PaymentTarget, currency: Currency = "BDT") => api.post<PaymentSession>("/payments/init", { ...target, currency }),
 };
 
 /* ───────────────────────── queries ───────────────────────── */
@@ -101,7 +104,7 @@ export const useAssignStaff = () =>
 
 /** Starts an SSLCommerz session and sends the browser to the hosted payment page. */
 export const usePayOnline = () =>
-  useApiMutation(({ bookingId, currency }: { bookingId: number; currency?: Currency }) => bookingsApi.initPayment(bookingId, currency), {
+  useApiMutation(({ currency, ...target }: PaymentTarget & { currency?: Currency }) => bookingsApi.initPayment(target as PaymentTarget, currency), {
     successMessage: "Redirecting to secure payment…",
     onSuccess: (res) => window.location.assign(res.data.gatewayUrl),
   });

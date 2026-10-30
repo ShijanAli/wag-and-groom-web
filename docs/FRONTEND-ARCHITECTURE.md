@@ -121,3 +121,28 @@ What you get with no extra code:
   amount defaults to what is due or what can still be refunded.
 - **Cache scope:** one `["bookings"]` scope covers every booking list. Any booking or payment change refreshes
   the customer, staff and admin views together.
+
+## Adoption (F4)
+
+- **`/adopt`**: the first page is rendered on the server (ISR 60s). Filters run on the client:
+  - animal, gender, size, age, fee, sort and search
+  - the UI params `age`, `fee` and `sort` are mapped to `minAgeMonths/maxAgeMonths`, `maxFee` and `sortBy/sortOrder`
+  - the filter state lives in the URL
+- **`/adopt/[slug]`**: ISR, generated on the first request. It has SEO metadata, OG image, a breadcrumb in
+  JSON-LD, a photo gallery, a favourite toggle and an apply button that changes with state:
+  - guest → sign in
+  - already applied → link to the application
+  - pet not available → disabled
+- **Favourites:** public pages are rendered for anonymous visitors, so the hearts come from one cached
+  `GET /me/favorites` request (`useFavoriteIds`).
+- **Flow:**
+  1. Customer applies.
+  2. Admin moves it to Under review, then Approves or Rejects. Approving creates the adoption and rejects the
+     other open applications.
+  3. Fee is paid at the counter (`RecordPaymentModal` with `adoptionId`) or online (`usePayOnline({ adoptionId })`).
+     The online result comes back to `/payment/success?applicationNo=…`.
+  4. Admin completes the handover. The API refuses until the fee is fully paid, so the button stays disabled.
+- **Photos:** a new pet takes photos in the create form (`MultiImageUploadField`, first = cover). For an
+  existing pet, use the Photos dialog (add, make cover, remove).
+- **API images** use plain `<img loading="lazy">` with `cdn(url, w, h)`, which asks Cloudinary for a resized
+  `f_auto,q_auto` version.

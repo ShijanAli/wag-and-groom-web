@@ -9,14 +9,15 @@ import { METHOD_LABEL, refundable, useRecordPayment, useRefund } from "./api";
 
 const COUNTER_METHODS = (["cash", "card", "mobile_banking"] as const).map((v) => ({ value: v, label: METHOD_LABEL[v] }));
 
-/** Counter payment (cash / card / bKash) against a booking. Amount defaults to what is still due. */
+/** Counter payment (cash / card / bKash) for a booking or an adoption fee. Amount defaults to what is still due. */
 export function RecordPaymentModal({
-  booking,
+  target,
   due,
   open,
   onOpenChange,
 }: {
-  booking: { id: number; bookingNo: string } | null;
+  /** `{ bookingId }` or `{ adoptionId }` + a reference shown in the header */
+  target: ({ bookingId: number } | { adoptionId: number }) & { reference: string } | null;
   due: number;
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -36,11 +37,14 @@ export function RecordPaymentModal({
       onOpenChange={onOpenChange}
       size="sm"
       title="Record payment"
-      description={booking ? `${booking.bookingNo} · ${formatMoney(due)} due` : undefined}
+      description={target ? `${target.reference} · ${formatMoney(due)} due` : undefined}
       schema={schema}
       defaultValues={{ amount: due || undefined, method: "cash", note: "" }}
       submitText="Record payment"
-      onSubmit={(v) => record.mutateAsync({ bookingId: booking!.id, amount: v.amount, method: v.method, note: v.note || undefined })}
+      onSubmit={({ amount, method, note }) => {
+        const { reference: _ref, ...ref } = target!;
+        return record.mutateAsync({ ...ref, amount, method, note: note || undefined });
+      }}
     >
       <TextField name="amount" label="Amount" type="number" min={0} step="0.01" leading="৳" required />
       <SelectField name="method" label="Method" options={COUNTER_METHODS} />

@@ -24,6 +24,7 @@ export function SiteHeader({ onBook }: Props) {
   const navLinks = [
     { label: "Home", href: "/", active: pathname === "/" },
     { label: "Services", href: "/services", active: pathname === "/services" },
+    { label: "Adopt", href: "/adopt", active: pathname.startsWith("/adopt") },
     { label: "About", href: `${prefix}#about` },
     { label: "Gallery", href: `${prefix}#gallery` },
     { label: "Reviews", href: `${prefix}#testimonials` },

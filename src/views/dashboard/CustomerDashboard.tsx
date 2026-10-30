@@ -20,6 +20,7 @@ import { useListParams } from "@/hooks/use-list-params";
 import { useTabParam } from "@/hooks/use-tab-param";
 import { formatDateTime, formatMoney, toApiDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { MyAdoptionsTab, MyFavoritesTab } from "@/features/adoption/MyAdoptionTabs";
 import { ProfileSettings } from "@/features/auth/ProfileSettings";
 import { BookingModal } from "@/features/bookings/BookingModal";
 import { BookingBadges, BookingDetail, BookingFacts } from "@/features/bookings/components";
@@ -31,7 +32,7 @@ import { PetFields, petSchema, toPetForm, toPetInput, type PetForm } from "@/fea
 import { usePublicSettings } from "@/features/settings/api";
 import type { Booking, Payment, Pet } from "@/types/models";
 
-const TABS = ["bookings", "pets", "payments", "profile"] as const;
+const TABS = ["bookings", "pets", "adoptions", "favorites", "payments", "profile"] as const;
 const PAYABLE = (b: Booking) => ["pending", "confirmed"].includes(b.status) && ["unpaid", "partial"].includes(b.paymentStatus);
 
 export default function CustomerDashboard() {
@@ -47,6 +48,7 @@ export default function CustomerDashboard() {
         links={[
           { label: "Home", href: "/" },
           { label: "Services", href: "/services" },
+          { label: "Adopt", href: "/adopt" },
           { label: "My dashboard", href: "/dashboard" },
         ]}
         profileHref="/dashboard?tab=profile"
@@ -75,11 +77,15 @@ export default function CustomerDashboard() {
           <TabsList className="h-auto flex-wrap">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="pets">My pets</TabsTrigger>
+            <TabsTrigger value="adoptions">Adoptions</TabsTrigger>
+            <TabsTrigger value="favorites">Favourites</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
           <TabsContent value="bookings">{tab === "bookings" && <BookingsTab onBook={openBooking} />}</TabsContent>
           <TabsContent value="pets">{tab === "pets" && <PetsTab />}</TabsContent>
+          <TabsContent value="adoptions">{tab === "adoptions" && <MyAdoptionsTab />}</TabsContent>
+          <TabsContent value="favorites">{tab === "favorites" && <MyFavoritesTab />}</TabsContent>
           <TabsContent value="payments">{tab === "payments" && <PaymentsTab />}</TabsContent>
           <TabsContent value="profile">{tab === "profile" && <ProfileSettings />}</TabsContent>
         </Tabs>
@@ -326,7 +332,11 @@ function PaymentsTab() {
   const columns = useMemo<ColumnDef<Payment>[]>(
     () => [
       { id: "createdAt", header: "Date", enableSorting: true, cell: ({ row }) => formatDateTime(row.original.paidAt ?? row.original.createdAt) },
-      { id: "booking", header: "Booking", cell: ({ row }) => <span className="font-mono text-xs">{row.original.booking?.bookingNo ?? "—"}</span> },
+      {
+        id: "booking",
+        header: "For",
+        cell: ({ row }) => <span className="font-mono text-xs">{row.original.booking?.bookingNo ?? (row.original.adoption ? "Adoption fee" : "—")}</span>,
+      },
       { id: "method", header: "Method", cell: ({ row }) => (row.original.type === "refund" ? "Refund" : METHOD_LABEL[row.original.method]) },
       {
         id: "amount",

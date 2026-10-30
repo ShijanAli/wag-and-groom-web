@@ -189,7 +189,7 @@ function BookingPanel({ booking, open, onOpenChange }: { booking: Booking | null
           options={(providers.data?.data ?? []).map((s) => ({ value: s.id, label: fullName(s), disabled: s.status !== "active" }))}
         />
       </FormModal>
-      <RecordPaymentModal booking={b ?? null} due={due} open={pay.isOpen} onOpenChange={pay.setOpen} />
+      <RecordPaymentModal target={b ? { bookingId: b.id, reference: b.bookingNo } : null} due={due} open={pay.isOpen} onOpenChange={pay.setOpen} />
     </Modal>
   );
 }
