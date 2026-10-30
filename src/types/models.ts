@@ -333,6 +333,15 @@ export interface PublicSettings {
   contact_email: string;
   contact_phone: string;
   social_links: Record<string, string>;
+  opening_hours?: OpeningDay[];
+}
+
+/** One weekday of the `opening_hours` setting (0 = Sunday … 6 = Saturday), Dhaka local time. */
+export interface OpeningDay {
+  day: number;
+  open: boolean;
+  opens: string; // HH:mm
+  closes: string; // HH:mm
 }
 
 /* ───────────────────────── adoption (F4) ───────────────────────── */

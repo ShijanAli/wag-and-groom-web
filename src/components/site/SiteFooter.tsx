@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Heart, Mail, MapPin, Phone } from "lucide-react";
+import { Clock, Heart, Mail, MapPin, Phone } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
 import { SITE } from "@/lib/site";
 import { useContactInfo } from "@/features/settings/api";
 import { NewsletterForm } from "./NewsletterForm";
+import { OpenNow } from "./OpenNow";
 
 const columns: { title: string; links: [string, string][] }[] = [
   { title: "Explore", links: [["Services & prices", "/services"], ["Adopt a pet", "/adopt"], ["Gallery", "/gallery"], ["Blog", "/blog"]] },
@@ -31,6 +32,17 @@ export function SiteFooter() {
               <a href={c.mapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-primary">
                 <MapPin className="h-4 w-4" /> {c.address}
               </a>
+              <div className="flex gap-2">
+                <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <div>
+                  {c.hours.map((h) => (
+                    <p key={h.label}>
+                      {h.label}: {h.value}
+                    </p>
+                  ))}
+                  <OpenNow week={c.week} className="mt-1 text-background/80" />
+                </div>
+              </div>
             </address>
           </div>
           {columns.map((col) => (

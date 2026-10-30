@@ -201,3 +201,8 @@ If role/permissions differ, cached queries are invalidated and a toast explains 
 **Admin edits show on the website right away.** Server reads in `lib/api/server.ts` are tagged per resource (`api:blog`, `api:services`, …). Mutations on public resources call `revalidateSite()` (batched, fire-and-forget) → `POST /api/revalidate` (Next route handler) → `revalidateTag`. The handler verifies the bearer token against `/auth/me` and only accepts users with at least one permission (customers/guests get 401/403). `createResourceHooks` derives the resource from its path automatically; custom mutations pass `revalidate: [...]`. ISR timers remain as a fallback.
 
 Client lists seeded with ISR data (`/adopt`, `/gallery`, review summaries) use `initialDataUpdatedAt: 0`, so they render instantly and refresh in the background.
+
+## Opening hours (setting)
+
+`opening_hours` is a public backend setting (7 entries, `{ day: 0–6, open, opens: "HH:mm", closes: "HH:mm" }`, Dhaka time). Admin → Settings → Opening hours edits it (per-day switch + times, copy one day's hours to every open day, live preview of how the website will word it).
+`lib/hours.ts` turns it into: grouped labels (`Sat, Mon–Thu 8 AM – 7 PM · Fri Closed`, Saturday-first week), an "Open now · until 7 PM / Closed · opens tomorrow 8 AM" status (`<OpenNow>`, computed after mount and every minute, so cached HTML never shows a stale state) and the schema.org `openingHoursSpecification`. Shown in the home contact section, the footer and the home JSON-LD. Booking slots are unaffected (they follow staff schedules).

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { useFormState } from "react-hook-form";
-import { CalendarClock, CreditCard, Globe, Lock, Mail, Save, Undo2 } from "lucide-react";
+import { useFormContext, useFormState, useWatch } from "react-hook-form";
+import { CalendarClock, Clock, Copy, CreditCard, Globe, Lock, Mail, Save, Undo2 } from "lucide-react";
 import { z } from "zod";
 import { AppForm, useZodForm } from "@/components/common/form/AppForm";
 import { FieldRow, SelectField, TextField } from "@/components/common/form/fields";
@@ -15,9 +15,12 @@ import { useAuth } from "@/context/AuthContext";
 import { timeAgo } from "@/lib/format";
 import { PERMISSIONS as P } from "@/lib/permissions";
 import { useSettings, useUpdateSettings } from "@/features/system/api";
-import type { Setting } from "@/types/models";
+import { Switch } from "@/components/ui/switch";
+import { DAY_LONG, DEFAULT_OPENING_HOURS, WEEK_ORDER, groupHours } from "@/lib/hours";
+import type { OpeningDay, Setting } from "@/types/models";
 
 /* Mirrors the backend SETTING_DEFINITIONS (validated again server-side). */
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const url = z.union([z.literal(""), z.string().trim().url("Enter a full link, e.g. https://facebook.com/petplex")]);
 const int = (min: number, max: number) => z.number({ invalid_type_error: "Enter a number" }).int("Whole numbers only").min(min, `Min ${min}`).max(max, `Max ${max}`);
 
@@ -36,6 +39,15 @@ const schema = z.object({
   booking_payment_timeout_minutes: int(0, 1440),
   usd_exchange_rate: z.number({ invalid_type_error: "Enter a number" }).positive("Must be greater than 0").max(10_000),
   admin_notification_email: z.string().trim().email("Enter a valid email"),
+  // index = weekday (0 = Sunday), same rules as the backend
+  opening_hours: z
+    .array(z.object({ day: z.number(), open: z.boolean(), opens: z.string().regex(HHMM, "Pick a time"), closes: z.string().regex(HHMM, "Pick a time") }))
+    .length(7)
+    .superRefine((days, ctx) =>
+      days.forEach((d, i) => {
+        if (d.open && d.closes <= d.opens) ctx.addIssue({ code: "custom", path: [i, "closes"], message: "Must be after opening" });
+      }),
+    ),
 });
 type Form = z.output<typeof schema>;
 type Values = Record<string, unknown>;
@@ -57,6 +69,10 @@ function toForm(values: Values): z.input<typeof schema> {
     booking_payment_timeout_minutes: Number(values.booking_payment_timeout_minutes ?? 30),
     usd_exchange_rate: Number(values.usd_exchange_rate ?? 0),
     admin_notification_email: String(values.admin_notification_email ?? ""),
+    opening_hours: [0, 1, 2, 3, 4, 5, 6].map((day) => {
+      const week = Array.isArray(values.opening_hours) ? (values.opening_hours as OpeningDay[]) : DEFAULT_OPENING_HOURS;
+      return { ...(week.find((d) => d.day === day) ?? DEFAULT_OPENING_HOURS[day]) };
+    }),
   } as z.input<typeof schema>;
 }
 
@@ -139,6 +155,9 @@ function SettingsForm({ values, byKey, readOnly }: { values: Values; byKey: Map<
               <p className="text-xs text-muted-foreground sm:col-span-2">Fixed by the system — prices are stored in BDT.</p>
             </dl>
           </Section>
+          <Section icon={Clock} title="Opening hours" description="Shown in the website footer, the contact section (with an “Open now” badge) and Google results. Times are Dhaka time.">
+            <OpeningHoursEditor />
+          </Section>
           <Section icon={Mail} title="Notifications">
             <TextField name="admin_notification_email" label="Team inbox email" type="email" description={hint("admin_notification_email")} required />
           </Section>
@@ -179,6 +198,47 @@ function SaveBar({ onReset }: { onReset: () => void }) {
           Save settings
         </SubmitButton>
       </div>
+    </div>
+  );
+}
+
+/** 7 rows (Saturday-first): open switch + opening / closing time. "Copy to all" applies one row's hours to every open day. */
+function OpeningHoursEditor() {
+  const { setValue, control } = useFormContext<z.input<typeof schema>>();
+  const week = useWatch({ control, name: "opening_hours" }) as OpeningDay[];
+  const copyToAll = (from: OpeningDay) =>
+    week.forEach((d, i) => d.open && i !== from.day && (setValue(`opening_hours.${i}.opens`, from.opens, { shouldDirty: true }), setValue(`opening_hours.${i}.closes`, from.closes, { shouldDirty: true, shouldValidate: true })));
+
+  return (
+    <div className="space-y-3">
+      <ul className="divide-y rounded-xl border">
+        {WEEK_ORDER.map((day) => {
+          const d = week[day];
+          return (
+            <li key={day} className="flex flex-wrap items-start gap-x-3 gap-y-2 px-3 py-2.5">
+              <label className="flex w-36 items-center gap-2 pt-2 text-sm font-medium">
+                <Switch checked={d.open} onCheckedChange={(on) => setValue(`opening_hours.${day}.open`, on, { shouldDirty: true, shouldValidate: true })} aria-label={`Open on ${DAY_LONG[day]}`} />
+                {DAY_LONG[day]}
+              </label>
+              {d.open ? (
+                <div className="flex flex-1 items-start gap-1.5">
+                  <TextField name={`opening_hours.${day}.opens`} type="time" aria-label={`${DAY_LONG[day]} opens`} className="min-w-0 flex-1" />
+                  <span className="pt-2 text-sm text-muted-foreground">to</span>
+                  <TextField name={`opening_hours.${day}.closes`} type="time" aria-label={`${DAY_LONG[day]} closes`} className="min-w-0 flex-1" />
+                  <Button type="button" variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground" onClick={() => copyToAll(d)} title={`Use ${DAY_LONG[day]}'s hours for every open day`} aria-label={`Copy to all open days (${DAY_LONG[day]})`}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <span className="pt-2 text-sm text-muted-foreground">Closed</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="text-xs text-muted-foreground">
+        Website shows: {groupHours(week).map((h) => `${h.label} ${h.value}`).join(" · ")}
+      </p>
     </div>
   );
 }

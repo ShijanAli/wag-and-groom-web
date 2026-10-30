@@ -11,6 +11,7 @@ import { UserAvatar } from "@/components/common/UserAvatar";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { FaqAccordion } from "@/components/site/FaqAccordion";
+import { OpenNow } from "@/components/site/OpenNow";
 import { SectionHeading } from "@/components/site/Section";
 import { BookingModal } from "@/features/bookings/BookingModal";
 import { ServiceCard } from "@/features/catalog/ServiceCard";
@@ -421,7 +422,20 @@ export default function Index({ services, gallery, testimonials, faqs, posts, pe
                   { icon: Phone, label: "Phone", value: contact.phone, href: `tel:${contact.phoneHref}` },
                   { icon: Mail, label: "Email", value: contact.email, href: `mailto:${contact.email}` },
                   { icon: MapPin, label: "Studio", value: contact.address, href: contact.mapsUrl },
-                  { icon: Clock, label: "Hours", value: contact.hours.map((h) => `${h.label}: ${h.value}`).join(" · ") },
+                  {
+                    icon: Clock,
+                    label: "Hours",
+                    value: (
+                      <>
+                        {contact.hours.map((h) => (
+                          <span key={h.label} className="block">
+                            {h.label}: {h.value}
+                          </span>
+                        ))}
+                        <OpenNow week={contact.week} className="mt-1" />
+                      </>
+                    ),
+                  },
                 ].map((c) => {
                   const body = (
                     <>

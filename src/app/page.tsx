@@ -4,6 +4,7 @@ import type { ActivePromotion } from "@/features/promotions/PromoBanner";
 import { serverGet, serverList } from "@/lib/api/server";
 import { SITE, contactInfo } from "@/lib/site";
 import { faqJsonLd } from "@/components/site/FaqAccordion";
+import { openingHoursJsonLd } from "@/lib/hours";
 import type { AdoptionPet, BlogPost, Faq, GalleryItem, PublicSettings, Service, Testimonial } from "@/types/models";
 
 const title = "Pet Grooming, Spa, Walking & Adoption";
@@ -83,10 +84,7 @@ const buildJsonLd = ({ services, faqs, settings, stats }: HomeData) => {
         currenciesAccepted: "BDT",
         address: { "@type": "PostalAddress", streetAddress: c.address, addressCountry: SITE.country },
         ...(c.socials.length && { sameAs: c.socials.map((s) => s.url) }),
-        openingHoursSpecification: [
-          { "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], opens: "08:00", closes: "19:00" },
-          { "@type": "OpeningHoursSpecification", dayOfWeek: "Sunday", opens: "09:00", closes: "17:00" },
-        ],
+        openingHoursSpecification: openingHoursJsonLd(settings?.opening_hours),
         ...(stats.reviews > 0 && { aggregateRating: { "@type": "AggregateRating", ratingValue: stats.avgRating.toFixed(1), reviewCount: stats.reviews } }),
         hasOfferCatalog: {
           "@type": "OfferCatalog",
