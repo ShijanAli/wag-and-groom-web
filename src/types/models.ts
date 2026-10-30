@@ -188,6 +188,19 @@ export interface Role {
   description: string | null;
   status: ActiveStatus;
   isSystem: boolean;
+  createdAt?: ISODate;
+  /** list endpoint */
+  _count?: { users: number; permissions?: number };
+  /** detail endpoint */
+  permissions?: Permission[];
+}
+
+export interface Permission {
+  id: number;
+  name: string;
+  slug: string;
+  module: string;
+  description?: string | null;
 }
 
 /* ───────────────────────── bookings & payments (F3) ───────────────────────── */
@@ -589,4 +602,77 @@ export interface NewsletterSubscriber {
   status: SubscriptionStatus;
   subscribedAt: ISODate;
   unsubscribedAt: ISODate | null;
+}
+
+/* ───────────────────────── system (F6) ───────────────────────── */
+
+export interface DashboardStats {
+  generatedAt: ISODate;
+  currency: Currency;
+  users: { customers: number; staff: number; newCustomersThisMonth: number };
+  bookings: { today: number; upcoming: number; pending: number; completedThisMonth: number };
+  revenue: { thisMonth: number; lastMonth: number; total: number; growthPercent: number | null };
+  adoption: { availablePets: number; pendingApplications: number; inProgress: number; completedThisMonth: number };
+  reviews: { pending: number; averageRating: number | null };
+  inbox: { newMessages: number; subscribers: number };
+}
+
+export interface RevenuePoint {
+  period: string;
+  bookings: number;
+  adoptions: number;
+  total: number;
+  /** number of successful payments in the period */
+  payments: number;
+}
+
+export interface RevenueReport {
+  from: string;
+  to: string;
+  groupBy: "day" | "month";
+  currency: Currency;
+  total: number;
+  series: RevenuePoint[];
+}
+
+export interface TopService {
+  service: { id: number; name: string; slug: string; avgRating: string };
+  bookings: number;
+  bookedValue: number;
+}
+
+export type BookingsByStatus = Record<BookingStatus, number>;
+
+export type SettingGroup = "general" | "payment" | "booking" | "notification";
+
+export interface Setting {
+  id: number;
+  key: string;
+  value: unknown;
+  group: SettingGroup;
+  isPublic: boolean;
+  readonly: boolean;
+  description: string | null;
+  updatedAt: ISODate;
+}
+
+export type LogAction = "create" | "update" | "delete";
+
+export interface ActivityLog {
+  id: number;
+  userId: number | null;
+  action: LogAction;
+  modelType: string | null;
+  modelId: number | null;
+  oldValues: Record<string, unknown> | null;
+  newValues: { body?: Record<string, unknown>; route?: string; summary?: string; [k: string]: unknown } | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: ISODate;
+  user: { id: number; firstName: string; lastName: string; email: string } | null;
+}
+
+/** GET /pets (admin): a customer's pet with its owner */
+export interface AdminPet extends Pet {
+  user: { id: number; firstName: string; lastName: string; email: string; phone: string | null };
 }

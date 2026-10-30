@@ -22,20 +22,15 @@ import { useApiMutation } from "@/lib/api/hooks";
 import type { Id } from "@/lib/api/types";
 import { fullName } from "@/lib/auth";
 import { PERMISSIONS as P } from "@/lib/permissions";
-import { emailSchema, passwordSchema, phoneSchema } from "@/features/auth/schemas";
 import { useServiceOptions } from "@/features/catalog/api";
 import { ScheduleModal } from "@/features/staff/ScheduleModal";
 import { staffInvalidate, summarizeSchedule, useStaffList, useStaffRoleId } from "@/features/staff/api";
 import { usersApi } from "@/features/users/api";
+import { userCreateFields, userProfileFields } from "@/features/users/shared";
 import type { StaffMember, UserStatus } from "@/types/models";
 
-const profileFields = {
-  firstName: z.string().trim().min(1, "First name is required").max(100),
-  lastName: z.string().trim().min(1, "Last name is required").max(100),
-  phone: z.union([phoneSchema, z.literal("")]),
-};
-const createSchema = z.object({ ...profileFields, email: emailSchema, password: z.union([passwordSchema, z.literal("")]) });
-const editSchema = z.object(profileFields);
+const createSchema = z.object(userCreateFields);
+const editSchema = z.object(userProfileFields);
 
 export default function AdminStaff() {
   const { can } = useAuth();

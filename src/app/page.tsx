@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Index, { type HomeData } from "@/views/Index";
+import type { ActivePromotion } from "@/features/promotions/PromoBanner";
 import { serverGet, serverList } from "@/lib/api/server";
 import { SITE, contactInfo } from "@/lib/site";
 import { faqJsonLd } from "@/components/site/FaqAccordion";
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 async function getHomeData(): Promise<HomeData> {
-  const [services, featuredGallery, latestGallery, testimonials, faqs, posts, pets, settings] = await Promise.all([
+  const [services, featuredGallery, latestGallery, testimonials, faqs, posts, pets, settings, promotions] = await Promise.all([
     serverGet<Service[]>("/services", { status: "active", limit: 100, sortBy: "sortOrder", sortOrder: "asc" }),
     serverGet<GalleryItem[]>("/gallery/items", { isFeatured: true, limit: 7 }),
     serverGet<GalleryItem[]>("/gallery/items", { limit: 7 }),
@@ -38,6 +39,7 @@ async function getHomeData(): Promise<HomeData> {
     serverGet<BlogPost[]>("/blog/posts", { limit: 3 }),
     serverList<AdoptionPet>("/adoption-pets", { status: "available", limit: 4 }),
     serverGet<PublicSettings>("/settings/public"),
+    serverGet<ActivePromotion[]>("/promotions/active"),
   ]);
 
   const all = services ?? [];
@@ -57,6 +59,8 @@ async function getHomeData(): Promise<HomeData> {
     pets: pets?.data ?? [],
     settings,
     stats: { services: all.length, reviews, avgRating, adoptablePets: pets?.meta.total ?? 0 },
+    // the one ending soonest with a public code
+    promotion: (promotions ?? []).filter((p) => p.code).sort((a, b) => a.endsAt.localeCompare(b.endsAt))[0] ?? null,
   };
 }
 

@@ -2,13 +2,11 @@
 
 import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { BadgeCheck, Ban, CircleCheck, CirclePause, Eye, Pencil, Trash2 } from "lucide-react";
+import { BadgeCheck, Eye, Pencil, Trash2 } from "lucide-react";
 import { z } from "zod";
 import { DataTable, DataTableToolbar, RowActions, TableFilter } from "@/components/common/data-table";
-import { DetailList } from "@/components/common/DetailList";
 import { FieldRow, TextField, TextareaField } from "@/components/common/form/fields";
 import { FormModal } from "@/components/common/form/FormModal";
-import { Modal } from "@/components/common/Modal";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { UserCell } from "@/components/common/UserAvatar";
@@ -17,11 +15,13 @@ import { useAuth } from "@/context/AuthContext";
 import { useDisclosure } from "@/hooks/use-disclosure";
 import { useListParams } from "@/hooks/use-list-params";
 import { fullName } from "@/lib/auth";
-import { formatDate, formatDateTime, timeAgo } from "@/lib/format";
+import { formatDate, timeAgo } from "@/lib/format";
 import { PERMISSIONS as P } from "@/lib/permissions";
 import { phoneSchema } from "@/features/auth/schemas";
-import { USER_STATUS_OPTIONS, useUpdateUserStatus, userHooks } from "@/features/users/api";
-import type { User, UserStatus } from "@/types/models";
+import { USER_STATUS_OPTIONS, userHooks } from "@/features/users/api";
+import { useUserStatusActions } from "@/features/users/shared";
+import { CustomerDetailModal } from "@/features/users/CustomerDetail";
+import type { User } from "@/types/models";
 
 const editSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required").max(100),
@@ -35,15 +35,9 @@ const VERIFIED_OPTIONS = [
   { label: "Not verified", value: "false" },
 ];
 
-const STATUS_ACTIONS: { status: UserStatus; label: string; icon: typeof Ban; danger?: boolean }[] = [
-  { status: "active", label: "Activate", icon: CircleCheck },
-  { status: "inactive", label: "Deactivate", icon: CirclePause },
-  { status: "blocked", label: "Block", icon: Ban, danger: true },
-];
-
 export default function AdminCustomers() {
   const { can } = useAuth();
-  const { confirm, confirmDelete } = useConfirm();
+  const { confirmDelete } = useConfirm();
   const list = useListParams({ defaults: { sortBy: "createdAt", sortOrder: "desc" } });
   // role is fixed for this page → sent to the API but never shown in the URL
   const query = userHooks.useList({ ...list.params, role: "customer" });
@@ -51,7 +45,7 @@ export default function AdminCustomers() {
   const edit = useDisclosure<User>();
   const update = userHooks.useUpdate();
   const remove = userHooks.useRemove();
-  const setStatus = useUpdateUserStatus();
+  const statusActions = useUserStatusActions();
 
   const columns = useMemo<ColumnDef<User>[]>(
     () => [
@@ -91,21 +85,7 @@ export default function AdminCustomers() {
               actions={[
                 { label: "View", icon: Eye, onClick: () => view.open(u) },
                 { label: "Edit", icon: Pencil, onClick: () => edit.open(u), visible: can(P.USER.UPDATE) },
-                ...STATUS_ACTIONS.filter((a) => a.status !== u.status).map((a) => ({
-                  label: a.label,
-                  icon: a.icon,
-                  danger: a.danger,
-                  visible: can(P.USER.UPDATE),
-                  onClick: () =>
-                    confirm({
-                      title: `${a.label} ${fullName(u)}?`,
-                      description:
-                        a.status === "active" ? "They will be able to sign in and book again." : "They will be signed out and can't sign in until reactivated.",
-                      confirmText: a.label,
-                      tone: a.danger ? "danger" : "default",
-                      onConfirm: () => setStatus.mutateAsync({ id: u.id, status: a.status }),
-                    }),
-                })),
+                ...statusActions(u),
                 {
                   label: "Delete",
                   icon: Trash2,
@@ -121,7 +101,7 @@ export default function AdminCustomers() {
     ],
     // mutation objects change every render; their mutateAsync is stable
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [can, confirm, confirmDelete],
+    [can, confirmDelete, statusActions],
   );
 
   const total = query.data?.meta.total;
@@ -151,21 +131,7 @@ export default function AdminCustomers() {
         }
       />
 
-      <Modal open={view.isOpen} onOpenChange={view.setOpen} title={view.item ? fullName(view.item) : "Customer"} description={view.item?.email}>
-        {view.item && (
-          <DetailList
-            items={[
-              { label: "Status", value: <StatusBadge status={view.item.status} /> },
-              { label: "Email verified", value: view.item.emailVerifiedAt ? formatDateTime(view.item.emailVerifiedAt) : "Not yet" },
-              { label: "Phone", value: view.item.phone },
-              { label: "Joined", value: formatDateTime(view.item.createdAt) },
-              { label: "Last sign-in", value: view.item.lastLoginAt ? formatDateTime(view.item.lastLoginAt) : "Never" },
-              { label: "Address", value: view.item.address, full: true },
-              { label: "Bio", value: view.item.bio, full: true },
-            ]}
-          />
-        )}
-      </Modal>
+      <CustomerDetailModal customer={view.item} open={view.isOpen} onOpenChange={view.setOpen} />
 
       <FormModal
         open={edit.isOpen}

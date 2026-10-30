@@ -40,3 +40,9 @@ export const USER_STATUS_OPTIONS: { label: string; value: UserStatus }[] = [
   { label: "Inactive", value: "inactive" },
   { label: "Blocked", value: "blocked" },
 ];
+
+export const useUpdateUserRole = () =>
+  useApiMutation(({ id, roleId }: { id: Id; roleId: number }) => usersApi.updateRole(id, roleId), {
+    invalidate: [userHooks.keys.all, ["roles"]],
+    successMessage: "Role changed — it applies at their next sign-in or token refresh",
+  });

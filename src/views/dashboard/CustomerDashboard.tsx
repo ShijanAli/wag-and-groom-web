@@ -22,6 +22,7 @@ import { formatDateTime, formatMoney, toApiDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { MyAdoptionsTab, MyFavoritesTab } from "@/features/adoption/MyAdoptionTabs";
 import { ProfileSettings } from "@/features/auth/ProfileSettings";
+import { NotificationsCenter } from "@/features/notifications/NotificationsCenter";
 import { BookingModal } from "@/features/bookings/BookingModal";
 import { BookingBadges, BookingDetail, BookingFacts } from "@/features/bookings/components";
 import { canCustomerCancel, useCancelMyBooking, useMyBooking, useMyBookings, usePayOnline } from "@/features/bookings/api";
@@ -34,7 +35,7 @@ import { BookingReviewButton, MyReviewsTab, ReviewFormModal, useMyReviewsByBooki
 import { useDisclosure } from "@/hooks/use-disclosure";
 import type { Booking, Payment, Pet } from "@/types/models";
 
-const TABS = ["bookings", "pets", "reviews", "adoptions", "favorites", "payments", "profile"] as const;
+const TABS = ["bookings", "pets", "reviews", "adoptions", "favorites", "payments", "notifications", "profile"] as const;
 const PAYABLE = (b: Booking) => ["pending", "confirmed"].includes(b.status) && ["unpaid", "partial"].includes(b.paymentStatus);
 
 export default function CustomerDashboard() {
@@ -83,6 +84,7 @@ export default function CustomerDashboard() {
             <TabsTrigger value="adoptions">Adoptions</TabsTrigger>
             <TabsTrigger value="favorites">Favourites</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
           <TabsContent value="bookings">{tab === "bookings" && <BookingsTab onBook={openBooking} />}</TabsContent>
@@ -91,6 +93,7 @@ export default function CustomerDashboard() {
           <TabsContent value="adoptions">{tab === "adoptions" && <MyAdoptionsTab />}</TabsContent>
           <TabsContent value="favorites">{tab === "favorites" && <MyFavoritesTab />}</TabsContent>
           <TabsContent value="payments">{tab === "payments" && <PaymentsTab />}</TabsContent>
+          <TabsContent value="notifications">{tab === "notifications" && <NotificationsCenter />}</TabsContent>
           <TabsContent value="profile">{tab === "profile" && <ProfileSettings />}</TabsContent>
         </Tabs>
       </main>

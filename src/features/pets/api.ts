@@ -3,7 +3,7 @@
 import type { Option } from "@/components/common/form/fields";
 import { createResourceHooks } from "@/lib/api/hooks";
 import { createResource } from "@/lib/api/request";
-import type { Pet, PetGender, PetSize } from "@/types/models";
+import type { AdminPet, Pet, PetGender, PetSize } from "@/types/models";
 
 export interface PetInput {
   petTypeId: number;
@@ -41,3 +41,6 @@ export function petAge(dateOfBirth: string | null): string | null {
   if (months < 1) return "< 1 mo";
   return months < 12 ? `${months} mo${months === 1 ? "" : "s"}` : `${Math.floor(months / 12)} yr${months < 24 ? "" : "s"}`;
 }
+
+/** Admin: every customer's pet with its owner (read-only — customers manage their own pets). */
+export const adminPetHooks = createResourceHooks("admin-pets", createResource<AdminPet, never, never>("/pets"));

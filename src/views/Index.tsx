@@ -19,6 +19,7 @@ import { BlogCard } from "@/features/blog/components";
 import { ContactForm } from "@/features/content/ContactForm";
 import { GalleryGrid } from "@/features/gallery/components";
 import { useContactInfo } from "@/features/settings/api";
+import { PromoBanner, type ActivePromotion } from "@/features/promotions/PromoBanner";
 import type { AdoptionPet, BlogPost, Faq, GalleryItem, PublicSettings, Service, Testimonial } from "@/types/models";
 
 export interface HomeStats {
@@ -37,6 +38,7 @@ export interface HomeData {
   pets: AdoptionPet[];
   settings: PublicSettings | null;
   stats: HomeStats;
+  promotion: ActivePromotion | null;
 }
 
 const fadeUp = {
@@ -55,7 +57,7 @@ const perks = ["Certified, gentle groomers", "Pet first-aid trained team", "Prem
 
 const avatar = (name: string, image: string | null) => ({ firstName: name.split(" ")[0], lastName: name.split(" ").slice(1).join(" "), profilePhoto: image });
 
-export default function Index({ services, gallery, testimonials, faqs, posts, pets, settings, stats }: HomeData) {
+export default function Index({ services, gallery, testimonials, faqs, posts, pets, settings, stats, promotion }: HomeData) {
   const [booking, setBooking] = useState<{ open: boolean; serviceId?: number }>({ open: false });
   const openBooking = (serviceId?: number) => setBooking({ open: true, serviceId });
   const contact = useContactInfo(settings);
@@ -76,6 +78,7 @@ export default function Index({ services, gallery, testimonials, faqs, posts, pe
       <main>
         {/* Hero */}
         <section className="relative pt-[72px]">
+          {promotion && <PromoBanner promotion={promotion} />}
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-accent/70 via-background to-background" />
           <div className="absolute -right-24 -top-24 -z-10 h-[480px] w-[480px] rounded-full bg-primary/15 blur-3xl" />
           <div className="absolute -left-32 top-1/2 -z-10 h-[360px] w-[360px] rounded-full bg-secondary/15 blur-3xl" />

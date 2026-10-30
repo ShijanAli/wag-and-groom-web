@@ -48,6 +48,9 @@
     --chart-3: 45 90% 55%;
     --chart-4: 340 65% 55%;
     --chart-5: 200 60% 50%;
+    /* validated 2-series categorical pair (dataviz validator, light surface) */
+    --viz-1: #ee7c2b;
+    --viz-2: #0f9b8e;
 
     --warning: 45 90% 55%;
     --warning-foreground: 20 25% 10%;
@@ -58,6 +61,8 @@
   }
 
   .dark {
+    --viz-1: #dc6a1c;
+    --viz-2: #0f9b8e;
     --background: 20 20% 8%;
     --foreground: 30 15% 92%;
 

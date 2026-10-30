@@ -18,13 +18,14 @@ import { fullName } from "@/lib/auth";
 import { formatDay, formatTime, toApiDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ProfileSettings } from "@/features/auth/ProfileSettings";
+import { NotificationsCenter } from "@/features/notifications/NotificationsCenter";
 import { useStaffBookings } from "@/features/bookings/api";
 import { BookingBadges, BookingDetail, bookingDay } from "@/features/bookings/components";
 import { StatusActions } from "@/features/bookings/StatusActions";
 import { WEEKDAYS, WEEK_ORDER, useMySchedule } from "@/features/staff/api";
 import type { Booking } from "@/types/models";
 
-const TABS = ["today", "upcoming", "history", "schedule", "profile"] as const;
+const TABS = ["today", "upcoming", "history", "schedule", "notifications", "profile"] as const;
 
 export default function StaffDashboard() {
   const { user } = useAuth();
@@ -48,12 +49,14 @@ export default function StaffDashboard() {
             <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
             <TabsTrigger value="schedule">My hours</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
           <TabsContent value="today">{tab === "today" && <AppointmentList scope="today" onOpen={setDetail} />}</TabsContent>
           <TabsContent value="upcoming">{tab === "upcoming" && <AppointmentList scope="upcoming" onOpen={setDetail} />}</TabsContent>
           <TabsContent value="history">{tab === "history" && <AppointmentList scope="history" onOpen={setDetail} />}</TabsContent>
           <TabsContent value="schedule">{tab === "schedule" && <MyHours />}</TabsContent>
+          <TabsContent value="notifications">{tab === "notifications" && <NotificationsCenter />}</TabsContent>
           <TabsContent value="profile">{tab === "profile" && <ProfileSettings />}</TabsContent>
         </Tabs>
       </main>

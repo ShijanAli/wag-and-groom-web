@@ -1,15 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { timeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useLatestNotifications, useMarkAllRead, useMarkRead, useUnreadCount } from "@/features/notifications/api";
+import { NOTIFICATIONS_PAGE, notificationHref, panelOf, useLatestNotifications, useMarkAllRead, useMarkRead, useUnreadCount } from "@/features/notifications/api";
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const panel = panelOf(usePathname());
   const unread = useUnreadCount();
   const latest = useLatestNotifications(open);
   const markRead = useMarkRead();
@@ -55,7 +59,11 @@ export function NotificationBell() {
               <button
                 key={n.id}
                 type="button"
-                onClick={() => !n.readAt && markRead.mutate(n.id)}
+                onClick={() => {
+                  if (!n.readAt) markRead.mutate(n.id);
+                  const href = notificationHref(n, panel);
+                  if (href) (setOpen(false), router.push(href));
+                }}
                 className={cn("flex w-full gap-3 border-b px-4 py-3 text-left last:border-0 hover:bg-muted/50", !n.readAt && "bg-primary/[0.04]")}
               >
                 <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", n.readAt ? "bg-transparent" : "bg-primary")} aria-hidden />
@@ -68,6 +76,9 @@ export function NotificationBell() {
             ))
           )}
         </div>
+        <Link href={NOTIFICATIONS_PAGE[panel]} onClick={() => setOpen(false)} className="block border-t px-4 py-2.5 text-center text-sm font-medium text-primary hover:bg-muted/50">
+          View all notifications
+        </Link>
       </PopoverContent>
     </Popover>
   );

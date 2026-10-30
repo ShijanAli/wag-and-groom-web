@@ -173,3 +173,20 @@ What you get with no extra code:
 **Admin**: Reviews (pending queue, approve/reject, public reply), Gallery (photo grid with drop-to-upload, feature, reorder; albums), Blog (posts/categories tabs + full-page editor at `/admin/blog/new` and `/admin/blog/[id]` with publish/schedule and a Google preview), FAQs, Testimonials, Messages (unread dot, opening marks read, prefilled mailto reply), Newsletter (CSV export via an authenticated blob download).
 
 **Customer**: completed bookings show "Write a review" / "Your review · N★"; the new Reviews tab lists them with moderation status. Approved reviews are locked (the backend refuses edits) — the UI hides Edit instead of failing.
+
+## System (F6)
+
+| Page | API | Notes |
+| --- | --- | --- |
+| `/admin` dashboard | `/dashboard/stats`, `/revenue`, `/top-services`, `/bookings-by-status`, today's bookings | KPI cards are "now"; the chart/bars follow the 7d / 30d / 90d / 12m period (`?range=`, month buckets for 12m). "Needs attention" links straight to the filtered queues. |
+| `/admin/users` | `/users`, `/users/:id/role`, `/users/:id/status` | Every account; create with any role, change role, activate/deactivate/block. No role/status/delete actions on your own account. |
+| `/admin/customers` | + `/pets?userId`, `/bookings?userId`, `/adoption-applications?userId` | Row click opens the 360° `CustomerDetailModal` (profile, pets, bookings, applications — each tab permission-gated). |
+| `/admin/pets` | `/pets` | Customers' pets, read-only; owner profile from the row menu. |
+| `/admin/roles` | `/roles`, `/permissions`, `PUT /roles/:id/permissions` | Roles list + grouped permission checklist with per-module toggles, filter, sticky save bar. Super admin is locked. Saving your own role refreshes your session so the menu updates immediately. |
+| `/admin/settings` | `/settings` | Typed form that mirrors the backend `SETTING_DEFINITIONS`; sends only changed keys; readonly keys shown locked. Public settings cache is invalidated so the website picks up changes. |
+| `/admin/activity-log` | `/activity-logs` | Module / action / date filters; detail modal shows the request and the data sent. |
+| Notifications | `/me/notifications` | `NotificationsCenter` is shared by `/admin/notifications`, `/staff?tab=notifications` and `/dashboard?tab=notifications`. `notificationHref()` maps a notification's `data` to the right page per panel; the bell uses the same mapping and links to the full page. |
+
+**Charts** (`features/system/RevenueChart.tsx`): two-series stacked bars using `--viz-1` / `--viz-2` (validated with the dataviz palette checker for light and dark surfaces), legend always shown, tooltip with both values + net, and a Table toggle as the accessible fallback.
+
+**Shared pieces added**: `StatCard`, `useUserStatusActions` + `userProfileFields` / `userCreateFields` (now used by Customers, Staff and Users), `CustomerDetailModal`, `NotificationsCenter`, `PromoBanner`.

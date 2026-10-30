@@ -1,5 +1,10 @@
 import {
+  Bell,
   CalendarDays,
+  Dog,
+  History,
+  Settings,
+  UsersRound,
   ClipboardList,
   HeartHandshake,
   HelpCircle,
@@ -51,6 +56,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       { title: "Bookings", url: "/admin/bookings", icon: CalendarDays, anyOf: [P.BOOKING.VIEW], keywords: ["appointments", "schedule"] },
       { title: "Payments", url: "/admin/payments", icon: Wallet, anyOf: [P.PAYMENT.VIEW], keywords: ["transactions", "refunds", "sslcommerz", "cash"] },
       { title: "Customers", url: "/admin/customers", icon: Users, anyOf: [P.USER.VIEW], keywords: ["clients", "users"] },
+      { title: "Pets", url: "/admin/pets", icon: Dog, anyOf: [P.PET.VIEW], keywords: ["customer pets", "animals", "vaccinated"] },
     ],
   },
   {
@@ -122,7 +128,11 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   {
     label: "System",
     items: [
+      { title: "Users", url: "/admin/users", icon: UsersRound, anyOf: [P.USER.VIEW], keywords: ["accounts", "team", "admins", "change role"] },
       { title: "Roles & Permissions", url: "/admin/roles", icon: Shield, anyOf: [P.ROLE.VIEW], keywords: ["access", "security"] },
+      { title: "Settings", url: "/admin/settings", icon: Settings, anyOf: [P.SETTING.VIEW], keywords: ["contact", "booking rules", "exchange rate", "social"] },
+      { title: "Activity Log", url: "/admin/activity-log", icon: History, anyOf: [P.ACTIVITY_LOG.VIEW], keywords: ["audit", "history", "changes"] },
+      { title: "Notifications", url: "/admin/notifications", icon: Bell, anyOf: [], keywords: ["alerts", "updates"] },
       { title: "Profile", url: "/admin/profile", icon: User, anyOf: [], keywords: ["account", "password"] },
     ],
   },
