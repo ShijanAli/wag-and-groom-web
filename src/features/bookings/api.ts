@@ -5,7 +5,7 @@ import type { Option } from "@/components/common/form/fields";
 import { createKeys, useApiMutation } from "@/lib/api/hooks";
 import { api } from "@/lib/api/request";
 import type { Id, ListParams } from "@/lib/api/types";
-import type { Availability, Booking, BookingStatus, Currency } from "@/types/models";
+import type { Availability, Booking, BookingStatus } from "@/types/models";
 
 export interface CreateBookingInput {
   serviceId: number;
@@ -25,17 +25,6 @@ export interface PromoPreview {
   servicePrice: number;
   discountAmount: number;
   totalAmount: number;
-}
-
-export type PaymentTarget = { bookingId: number; adoptionId?: never } | { adoptionId: number; bookingId?: never };
-
-export interface PaymentSession {
-  paymentId: number;
-  transactionId: string;
-  reference: string;
-  amount: number;
-  currency: Currency;
-  gatewayUrl: string;
 }
 
 /** One cache scope for every booking view (customer, staff, admin) so any change refreshes all of them. */
@@ -58,8 +47,6 @@ export const bookingsApi = {
   // booking helpers
   availability: (serviceId: Id, date: string, staffId?: number) => api.get<Availability>(`/services/${serviceId}/availability`, { date, staffId }),
   validatePromo: (code: string, serviceId: number) => api.post<PromoPreview>("/promotions/validate", { code, serviceId }),
-  /** Online payment for a booking or an adoption fee. */
-  initPayment: (target: PaymentTarget, currency: Currency = "BDT") => api.post<PaymentSession>("/payments/init", { ...target, currency }),
 };
 
 /* ───────────────────────── queries ───────────────────────── */
@@ -101,13 +88,6 @@ export const useUpdateBookingStatus = () =>
 
 export const useAssignStaff = () =>
   useApiMutation(({ id, staffId }: { id: Id; staffId: number }) => bookingsApi.assignStaff(id, staffId), { invalidate });
-
-/** Starts an SSLCommerz session and sends the browser to the hosted payment page. */
-export const usePayOnline = () =>
-  useApiMutation(({ currency, ...target }: PaymentTarget & { currency?: Currency }) => bookingsApi.initPayment(target as PaymentTarget, currency), {
-    successMessage: "Redirecting to secure payment…",
-    onSuccess: (res) => window.location.assign(res.data.gatewayUrl),
-  });
 
 /* ───────────────────────── rules (mirror backend STATUS_TRANSITIONS) ───────────────────────── */
 

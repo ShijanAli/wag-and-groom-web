@@ -146,7 +146,7 @@ export default function ServiceDetailPage({ service: s, summary, gallery, relate
               <h2 className="mb-5 font-display text-3xl font-bold">What&apos;s included</h2>
               <div className="space-y-3 whitespace-pre-line text-lg leading-relaxed text-muted-foreground">{s.description}</div>
               <ul className="mt-8 grid gap-3 sm:grid-cols-2">
-                {["Certified, gentle handlers", "Pet-safe, skin-friendly products", "Updates during the visit", "Pay online or at the counter"].map((p) => (
+                {["Certified, gentle handlers", "Pet-safe, skin-friendly products", "Updates during the visit", "Pay at the counter"].map((p) => (
                   <li key={p} className="flex items-center gap-2 text-sm font-medium">
                     <Check className="h-4 w-4 text-success" /> {p}
                   </li>

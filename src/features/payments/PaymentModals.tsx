@@ -78,7 +78,6 @@ export function RefundModal({ payment, open, onOpenChange }: { payment: Payment 
     >
       <TextField name="amount" label="Amount" type="number" min={0} step="0.01" leading={payment?.currency === "USD" ? "$" : "৳"} required />
       <TextareaField name="reason" label="Reason" rows={2} placeholder="e.g. Booking cancelled by the shop" />
-      {payment?.method === "sslcommerz" && <p className="text-xs text-muted-foreground">Online payments are refunded to the customer's original method through SSLCommerz.</p>}
     </FormModal>
   );
 }

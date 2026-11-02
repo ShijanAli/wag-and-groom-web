@@ -51,7 +51,7 @@ const reveal = { initial: "hidden", whileInView: "visible", viewport: { once: tr
 const steps = [
   { icon: CalendarCheck, title: "Book online", desc: "Pick a service, your pet and a free time slot. Takes about a minute." },
   { icon: PawPrint, title: "Bring your pet", desc: "Drop off at our studio — we'll keep you posted while we pamper them." },
-  { icon: Heart, title: "Enjoy the results", desc: "Pick up a happy, fresh pet. Pay online with bKash, Nagad or card, or at the counter." },
+  { icon: Heart, title: "Enjoy the results", desc: "Pick up a happy, fresh pet. Pay at the counter." },
 ];
 
 const perks = ["Certified, gentle groomers", "Pet first-aid trained team", "Premium, skin-friendly products", "Rescue pets looking for a home"];

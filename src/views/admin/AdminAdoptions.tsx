@@ -27,6 +27,7 @@ import { ADOPTION_STATUS_OPTIONS, useAdoption, useAdoptions, useCancelAdoption, 
 import { feeLabel } from "@/features/adoption/components";
 import { PaymentLines } from "@/features/bookings/components";
 import { RecordPaymentModal } from "@/features/payments/PaymentModals";
+import { PAYMENTS_ENABLED } from "@/lib/features";
 import type { Adoption } from "@/types/models";
 
 const STATUS_LABEL: Record<string, string> = { in_progress: "In progress" };
@@ -78,7 +79,7 @@ export default function AdminAdoptions() {
           return (
             <div className="whitespace-nowrap">
               <p className="font-semibold">{feeLabel(a.feeAmount)}</p>
-              <p className={a.feeDue > 0 ? "text-xs font-medium text-destructive" : "text-xs text-success"}>{a.feeDue > 0 ? `${formatMoney(a.feeDue)} due` : "Paid"}</p>
+              {PAYMENTS_ENABLED && <p className={a.feeDue > 0 ? "text-xs font-medium text-destructive" : "text-xs text-success"}>{a.feeDue > 0 ? `${formatMoney(a.feeDue)} due` : "Paid"}</p>}
             </div>
           );
         },
@@ -143,7 +144,7 @@ function AdoptionModal({ id, open, onOpenChange }: { id: number | null; open: bo
             <div className="flex w-full flex-wrap justify-between gap-2">
               <div className="flex flex-wrap gap-2">
                 <Can permission={P.PAYMENT.CREATE}>
-                  {a.feeDue > 0 && (
+                  {PAYMENTS_ENABLED && a.feeDue > 0 && (
                     <Button variant="outline" size="sm" onClick={() => pay.open()}>
                       <Banknote className="mr-1.5 h-4 w-4" /> Record fee
                     </Button>
@@ -156,7 +157,7 @@ function AdoptionModal({ id, open, onOpenChange }: { id: number | null; open: bo
                   <Ban className="mr-1.5 h-4 w-4" /> Cancel
                 </Button>
               </div>
-              <Button size="sm" disabled={a.feeDue > 0} title={a.feeDue > 0 ? "Collect the full fee first" : undefined} onClick={() => complete.open()}>
+              <Button size="sm" disabled={PAYMENTS_ENABLED && a.feeDue > 0} title={PAYMENTS_ENABLED && a.feeDue > 0 ? "Collect the full fee first" : undefined} onClick={() => complete.open()}>
                 <CheckCheck className="mr-1.5 h-4 w-4" /> Complete handover
               </Button>
             </div>
@@ -170,12 +171,12 @@ function AdoptionModal({ id, open, onOpenChange }: { id: number | null; open: bo
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <StatusBadge status={a.status} label={STATUS_LABEL[a.status]} />
-            {a.feeDue > 0 && active && <span className="text-sm font-medium text-destructive">{formatMoney(a.feeDue)} still due — required before handover</span>}
+            {PAYMENTS_ENABLED && a.feeDue > 0 && active && <span className="text-sm font-medium text-destructive">{formatMoney(a.feeDue)} still due — required before handover</span>}
           </div>
           <DetailList
             items={[
               { label: "Adopter", value: a.user ? `${fullName(a.user)} · ${a.user.email}` : "—" },
-              { label: "Fee", value: `${feeLabel(a.feeAmount)} · paid ${formatMoney(a.feePaid)}` },
+              { label: "Fee", value: PAYMENTS_ENABLED ? `${feeLabel(a.feeAmount)} · paid ${formatMoney(a.feePaid)}` : feeLabel(a.feeAmount) },
               { label: a.status === "completed" ? "Handed over" : "Planned handover", value: formatDay(a.adoptionDate) },
               { label: "Follow-up visit", value: a.followUpDate ? formatDay(a.followUpDate) : "Not scheduled" },
               {
@@ -192,10 +193,12 @@ function AdoptionModal({ id, open, onOpenChange }: { id: number | null; open: bo
               ...(a.cancelReason ? [{ label: "Cancellation reason", value: a.cancelReason, full: true }] : []),
             ]}
           />
-          <section className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fee payments</h3>
-            <PaymentLines payments={a.payments} />
-          </section>
+          {PAYMENTS_ENABLED && (
+            <section className="space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fee payments</h3>
+              <PaymentLines payments={a.payments} />
+            </section>
+          )}
         </div>
       )}
 

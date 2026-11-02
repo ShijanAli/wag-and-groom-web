@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CreditCard, FileText, Heart, Loader2, PawPrint, X } from "lucide-react";
+import { FileText, Heart, PawPrint, X } from "lucide-react";
 import { useConfirm } from "@/components/common/ConfirmDialog";
 import { EmptyState } from "@/components/common/EmptyState";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatDay, formatMoney } from "@/lib/format";
 import { cdn } from "@/lib/image";
-import { usePayOnline } from "@/features/bookings/api";
+import { PAYMENTS_ENABLED } from "@/lib/features";
 import type { AdoptionApplication, AdoptionPetSummary } from "@/types/models";
 import { useMyAdoptions, useMyApplications, useMyFavorites, useWithdrawApplication } from "./api";
 import { AdoptionPetCard, feeLabel } from "./components";
@@ -29,12 +29,11 @@ function PetThumb({ pet }: { pet: AdoptionPetSummary }) {
   );
 }
 
-/** Customer dashboard → Adoptions: applications (with fee payment) + completed adoptions. */
+/** Customer dashboard → Adoptions: applications + completed adoptions. */
 export function MyAdoptionsTab() {
   const apps = useMyApplications({ limit: 50, sortBy: "createdAt", sortOrder: "desc" });
   const adoptions = useMyAdoptions({ limit: 50, sortBy: "createdAt", sortOrder: "desc" });
   const withdraw = useWithdrawApplication();
-  const pay = usePayOnline();
   const { confirm } = useConfirm();
 
   if (apps.isPending) return <div className="space-y-3">{Array.from({ length: 2 }, (_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>;
@@ -106,8 +105,14 @@ export function MyAdoptionsTab() {
                 <div className="flex flex-col gap-3 rounded-xl bg-muted/50 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-0.5">
                     <p>
-                      Adoption fee <span className="font-semibold">{feeLabel(ad.feeAmount)}</span> · paid {formatMoney(ad.feePaid)}
-                      {due > 0 && <span className="font-semibold text-destructive"> · due {formatMoney(due)}</span>}
+                      Adoption fee <span className="font-semibold">{feeLabel(ad.feeAmount)}</span>
+                      {PAYMENTS_ENABLED && (
+                        <>
+                          {" "}
+                          · paid {formatMoney(ad.feePaid)}
+                          {due > 0 && <span className="font-semibold text-destructive"> · due {formatMoney(due)}</span>}
+                        </>
+                      )}
                     </p>
                     {full && (
                       <p className="text-muted-foreground">
@@ -122,12 +127,6 @@ export function MyAdoptionsTab() {
                         <a href={full.contractFile} target="_blank" rel="noreferrer">
                           <FileText className="mr-1.5 h-4 w-4" /> Contract
                         </a>
-                      </Button>
-                    )}
-                    {due > 0 && ad.status === "in_progress" && (
-                      <Button size="sm" disabled={pay.isPending} onClick={() => pay.mutate({ adoptionId: ad.id })}>
-                        {pay.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CreditCard className="mr-1.5 h-4 w-4" />}
-                        Pay adoption fee
                       </Button>
                     )}
                   </div>

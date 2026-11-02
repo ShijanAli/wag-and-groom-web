@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
 import { timeAgo } from "@/lib/format";
+import { PAYMENTS_ENABLED } from "@/lib/features";
 import { PERMISSIONS as P } from "@/lib/permissions";
 import { useSettings, useUpdateSettings } from "@/features/system/api";
 import { Switch } from "@/components/ui/switch";
@@ -110,7 +111,7 @@ function SettingsForm({ values, byKey, readOnly }: { values: Values; byKey: Map<
         if (Object.keys(changed).length) await update.mutateAsync(changed);
       }}
     >
-      <PageHeader title="Settings" description={`Business details and rules used across the website, booking and payments.${lastUpdate ? ` Last changed ${timeAgo(lastUpdate)}.` : ""}`} />
+      <PageHeader title="Settings" description={`Business details and rules used across the website and booking.${lastUpdate ? ` Last changed ${timeAgo(lastUpdate)}.` : ""}`} />
       {readOnly && <p className="mb-4 rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">You can view settings but not change them.</p>}
 
       <fieldset disabled={readOnly} className="grid gap-6 xl:grid-cols-2">
@@ -137,10 +138,11 @@ function SettingsForm({ values, byKey, readOnly }: { values: Values; byKey: Map<
             <TextField name="booking_advance_days" label="Book up to (days ahead)" type="number" min={1} max={365} description={hint("booking_advance_days")} />
             <TextField name="booking_cancel_before_hours" label="Free cancellation (hours before)" type="number" min={0} max={720} description={hint("booking_cancel_before_hours")} />
           </FieldRow>
-          <TextField name="booking_payment_timeout_minutes" label="Unpaid booking timeout (minutes)" type="number" min={0} max={1440} description={hint("booking_payment_timeout_minutes")} />
+          {PAYMENTS_ENABLED && <TextField name="booking_payment_timeout_minutes" label="Unpaid booking timeout (minutes)" type="number" min={0} max={1440} description={hint("booking_payment_timeout_minutes")} />}
         </Section>
 
         <div className="space-y-6">
+          {PAYMENTS_ENABLED && (
           <Section icon={CreditCard} title="Payments">
             <TextField name="usd_exchange_rate" label="USD exchange rate" type="number" step="0.01" min={0} leading="৳" description={hint("usd_exchange_rate")} />
             <dl className="grid gap-3 rounded-xl bg-muted/50 p-4 text-sm sm:grid-cols-2">
@@ -155,6 +157,7 @@ function SettingsForm({ values, byKey, readOnly }: { values: Values; byKey: Map<
               <p className="text-xs text-muted-foreground sm:col-span-2">Fixed by the system — prices are stored in BDT.</p>
             </dl>
           </Section>
+          )}
           <Section icon={Clock} title="Opening hours" description="Shown in the website footer, the contact section (with an “Open now” badge) and Google results. Times are Dhaka time.">
             <OpeningHoursEditor />
           </Section>

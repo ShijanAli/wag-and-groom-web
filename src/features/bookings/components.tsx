@@ -1,11 +1,12 @@
 "use client";
 
 import { format, parse } from "date-fns";
-import { CalendarDays, CircleDot, Clock, CreditCard, PawPrint, User } from "lucide-react";
+import { Banknote, CalendarDays, CircleDot, Clock, PawPrint, User } from "lucide-react";
 import { DetailList } from "@/components/common/DetailList";
 import { StatusBadge, humanize } from "@/components/common/StatusBadge";
 import { fullName } from "@/lib/auth";
 import { formatDateTime, formatMoney, formatTime } from "@/lib/format";
+import { PAYMENTS_ENABLED } from "@/lib/features";
 import { cn } from "@/lib/utils";
 import { METHOD_LABEL } from "@/features/payments/api";
 import type { Booking, BookingPaymentLine, BookingPaymentStatus } from "@/types/models";
@@ -24,7 +25,7 @@ export function BookingBadges({ booking }: { booking: Pick<Booking, "status" | "
   return (
     <div className="flex flex-wrap gap-1.5">
       <StatusBadge status={booking.status} />
-      {booking.status !== "cancelled" && <PaymentBadge status={booking.paymentStatus} />}
+      {PAYMENTS_ENABLED && booking.status !== "cancelled" && <PaymentBadge status={booking.paymentStatus} />}
     </div>
   );
 }
@@ -38,9 +39,9 @@ export function BookingTotals({ booking }: { booking: Booking }) {
     ["Service price", formatMoney(booking.servicePrice)],
     ...(Number(booking.discountAmount) > 0 ? ([[`Discount${booking.promotion ? ` (${booking.promotion.code})` : ""}`, `−${formatMoney(booking.discountAmount)}`, "text-success"]] as [string, string, string][]) : []),
     ["Total", formatMoney(booking.totalAmount), "font-semibold"],
-    ...(booking.payments ? ([["Paid", formatMoney(paid)]] as [string, string][]) : []),
-    ...(refunded > 0 ? ([["Refunded", formatMoney(refunded)]] as [string, string][]) : []),
-    ...(booking.payments && booking.status !== "cancelled" ? ([["Due", formatMoney(due), due > 0 ? "font-semibold text-destructive" : "text-success"]] as [string, string, string][]) : []),
+    ...(PAYMENTS_ENABLED && booking.payments ? ([["Paid", formatMoney(paid)]] as [string, string][]) : []),
+    ...(PAYMENTS_ENABLED && refunded > 0 ? ([["Refunded", formatMoney(refunded)]] as [string, string][]) : []),
+    ...(PAYMENTS_ENABLED && booking.payments && booking.status !== "cancelled" ? ([["Due", formatMoney(due), due > 0 ? "font-semibold text-destructive" : "text-success"]] as [string, string, string][]) : []),
   ];
   return (
     <dl className="space-y-1.5 rounded-xl bg-muted/50 p-4 text-sm">
@@ -120,10 +121,12 @@ export function BookingDetail({ booking, showCustomer = false }: { booking: Book
         ]}
       />
       <BookingTotals booking={booking} />
-      <section className="space-y-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Payments</h3>
-        <PaymentLines payments={booking.payments} />
-      </section>
+      {PAYMENTS_ENABLED && (
+        <section className="space-y-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Payments</h3>
+          <PaymentLines payments={booking.payments} />
+        </section>
+      )}
       <section className="space-y-3">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">History</h3>
         <BookingTimeline booking={booking} />
@@ -157,7 +160,7 @@ export function BookingFacts({ booking, showCustomer }: { booking: Booking; show
         )
       )}
       <li className="flex items-center gap-1.5">
-        <CreditCard className="h-3.5 w-3.5" /> {formatMoney(booking.totalAmount)}
+        <Banknote className="h-3.5 w-3.5" /> {formatMoney(booking.totalAmount)}
       </li>
     </ul>
   );

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { CalendarCheck, CalendarDays, CreditCard, Eye, Loader2, PawPrint, Pencil, Plus, RotateCcw, Syringe, Trash2, Wallet, X } from "lucide-react";
+import { CalendarCheck, CalendarDays, Clock, Eye, PawPrint, Pencil, Plus, RotateCcw, Syringe, Trash2, X } from "lucide-react";
 import { useConfirm } from "@/components/common/ConfirmDialog";
 import { DataTable, DataTablePagination, RowActions } from "@/components/common/data-table";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -25,7 +25,7 @@ import { ProfileSettings } from "@/features/auth/ProfileSettings";
 import { NotificationsCenter } from "@/features/notifications/NotificationsCenter";
 import { BookingModal } from "@/features/bookings/BookingModal";
 import { BookingBadges, BookingDetail, BookingFacts } from "@/features/bookings/components";
-import { canCustomerCancel, useCancelMyBooking, useMyBooking, useMyBookings, usePayOnline } from "@/features/bookings/api";
+import { canCustomerCancel, useCancelMyBooking, useMyBooking, useMyBookings } from "@/features/bookings/api";
 import { usePetTypeOptions } from "@/features/catalog/api";
 import { METHOD_LABEL, useMyPayments } from "@/features/payments/api";
 import { myPetHooks, petAge, type PetInput } from "@/features/pets/api";
@@ -33,10 +33,10 @@ import { PetFields, petSchema, toPetForm, toPetInput, type PetForm } from "@/fea
 import { usePublicSettings } from "@/features/settings/api";
 import { BookingReviewButton, MyReviewsTab, ReviewFormModal, useMyReviewsByBooking, type ReviewTarget } from "@/features/reviews/MyReviews";
 import { useDisclosure } from "@/hooks/use-disclosure";
-import type { Booking, Payment, Pet } from "@/types/models";
+import { PAYMENTS_ENABLED } from "@/lib/features";
+import type { Payment, Pet } from "@/types/models";
 
-const TABS = ["bookings", "pets", "reviews", "adoptions", "favorites", "payments", "notifications", "profile"] as const;
-const PAYABLE = (b: Booking) => ["pending", "confirmed"].includes(b.status) && ["unpaid", "partial"].includes(b.paymentStatus);
+const TABS = ["bookings", "pets", "reviews", "adoptions", "favorites", ...(PAYMENTS_ENABLED ? (["payments"] as const) : []), "notifications", "profile"] as const;
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
@@ -67,7 +67,7 @@ export default function CustomerDashboard() {
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <h1 className="font-display text-3xl font-bold">Hi {user?.firstName} 👋</h1>
-            <p className="text-muted-foreground">Your bookings, pets and payments in one place.</p>
+            <p className="text-muted-foreground">Your bookings and pets in one place.</p>
           </div>
           <Button onClick={() => openBooking()} className="gap-2">
             <Plus className="h-4 w-4" /> New booking
@@ -83,7 +83,7 @@ export default function CustomerDashboard() {
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
             <TabsTrigger value="adoptions">Adoptions</TabsTrigger>
             <TabsTrigger value="favorites">Favourites</TabsTrigger>
-            <TabsTrigger value="payments">Payments</TabsTrigger>
+            {PAYMENTS_ENABLED && <TabsTrigger value="payments">Payments</TabsTrigger>}
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
@@ -92,7 +92,7 @@ export default function CustomerDashboard() {
           <TabsContent value="reviews">{tab === "reviews" && <MyReviewsTab />}</TabsContent>
           <TabsContent value="adoptions">{tab === "adoptions" && <MyAdoptionsTab />}</TabsContent>
           <TabsContent value="favorites">{tab === "favorites" && <MyFavoritesTab />}</TabsContent>
-          <TabsContent value="payments">{tab === "payments" && <PaymentsTab />}</TabsContent>
+          {PAYMENTS_ENABLED && <TabsContent value="payments">{tab === "payments" && <PaymentsTab />}</TabsContent>}
           <TabsContent value="notifications">{tab === "notifications" && <NotificationsCenter />}</TabsContent>
           <TabsContent value="profile">{tab === "profile" && <ProfileSettings />}</TabsContent>
         </Tabs>
@@ -113,7 +113,7 @@ function Stats() {
   const items = [
     { label: "My pets", value: pets.data?.meta.total, icon: PawPrint, tone: "text-primary bg-primary/10" },
     { label: "Upcoming", value: upcoming.data?.meta.total, icon: CalendarDays, tone: "text-secondary bg-secondary/10" },
-    { label: "Awaiting payment", value: pending.data?.meta.total, icon: Wallet, tone: "text-amber-600 bg-warning/15" },
+    { label: "Pending", value: pending.data?.meta.total, icon: Clock, tone: "text-amber-600 bg-warning/15" },
     { label: "Completed", value: completed.data?.meta.total, icon: CalendarCheck, tone: "text-success bg-success/10" },
   ];
   return (
@@ -157,7 +157,6 @@ function BookingsTab({ onBook }: { onBook: (serviceId?: number) => void }) {
   const [detailNo, setDetailNo] = useState<string | null>(null);
   const settings = usePublicSettings();
   const cancel = useCancelMyBooking();
-  const pay = usePayOnline();
   const { confirm } = useConfirm();
   const cutoff = settings.data?.booking_cancel_before_hours ?? 24;
   const rows = query.data?.data ?? [];
@@ -198,12 +197,6 @@ function BookingsTab({ onBook }: { onBook: (serviceId?: number) => void }) {
                   <p className="font-mono text-xs text-muted-foreground">{b.bookingNo}</p>
                 </div>
                 <div className="flex flex-wrap gap-2 lg:justify-end">
-                  {PAYABLE(b) && (
-                    <Button size="sm" disabled={pay.isPending} onClick={() => pay.mutate({ bookingId: b.id })}>
-                      {pay.isPending && pay.variables?.bookingId === b.id ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CreditCard className="mr-1.5 h-4 w-4" />}
-                      Pay now
-                    </Button>
-                  )}
                   <Button size="sm" variant="outline" onClick={() => setDetailNo(b.bookingNo)}>
                     <Eye className="mr-1.5 h-4 w-4" /> Details
                   </Button>
@@ -215,7 +208,7 @@ function BookingsTab({ onBook }: { onBook: (serviceId?: number) => void }) {
                       onClick={() =>
                         confirm({
                           title: "Cancel this booking?",
-                          description: `${b.service.name} for ${b.pet.name} will be cancelled and the slot released. Online payments are refunded by our team.`,
+                          description: `${b.service.name} for ${b.pet.name} will be cancelled and the slot released.`,
                           confirmText: "Cancel booking",
                           cancelText: "Keep it",
                           tone: "danger",

@@ -18,6 +18,7 @@ import { useDisclosure } from "@/hooks/use-disclosure";
 import { useListParams } from "@/hooks/use-list-params";
 import { fullName } from "@/lib/auth";
 import { formatDateTime, formatMoney, formatTime } from "@/lib/format";
+import { PAYMENTS_ENABLED } from "@/lib/features";
 import { PERMISSIONS as P } from "@/lib/permissions";
 import { BOOKING_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, dueAmount, useAdminBookings, useAssignStaff, useBookingDetail } from "@/features/bookings/api";
 import { BookingBadges, BookingDetail, bookingDay } from "@/features/bookings/components";
@@ -95,7 +96,7 @@ export default function AdminBookings() {
 
   return (
     <>
-      <PageHeader title="Bookings" description="Every appointment — confirm, start, complete, assign staff and take payments." />
+      <PageHeader title="Bookings" description="Every appointment — confirm, start, complete and assign staff." />
       <DataTable
         columns={columns}
         query={query}
@@ -110,7 +111,7 @@ export default function AdminBookings() {
             filters={
               <>
                 <TableFilter list={list} param="status" options={BOOKING_STATUS_OPTIONS} allLabel="All statuses" placeholder="Status" />
-                <TableFilter list={list} param="paymentStatus" options={PAYMENT_STATUS_OPTIONS} allLabel="Any payment" placeholder="Payment" />
+                {PAYMENTS_ENABLED && <TableFilter list={list} param="paymentStatus" options={PAYMENT_STATUS_OPTIONS} allLabel="Any payment" placeholder="Payment" />}
                 <TableFilter list={list} param="serviceId" options={services.data ?? []} allLabel="All services" placeholder="Service" />
                 <TableFilter list={list} param="staffId" options={staff.data ?? []} allLabel="All staff" placeholder="Staff" />
                 <TableDateRange list={list} />
@@ -155,7 +156,7 @@ function BookingPanel({ booking, open, onOpenChange }: { booking: Booking | null
                 )}
               </Can>
               <Can permission={P.PAYMENT.CREATE}>
-                {due > 0 && PAYABLE_STATUSES.includes(b.status) && (
+                {PAYMENTS_ENABLED && due > 0 && PAYABLE_STATUSES.includes(b.status) && (
                   <Button variant="outline" size="sm" onClick={() => pay.open()}>
                     <Banknote className="mr-1.5 h-4 w-4" /> Record payment
                   </Button>

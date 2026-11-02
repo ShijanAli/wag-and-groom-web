@@ -6,7 +6,7 @@ export const SITE = {
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.petplex.com",
   tagline: "Professional Pet Grooming, Walking, Sitting & Spa",
   description:
-    "PetPlex is a pet care and adoption studio: professional grooming, spa, walking, sitting and daycare for dogs and cats, plus rescue pets looking for a home. Book online in a minute and pay with bKash, Nagad or card.",
+    "PetPlex is a pet care and adoption studio: professional grooming, spa, walking, sitting and daycare for dogs and cats, plus rescue pets looking for a home. Book online in a minute.",
   /** Fallbacks only — the live values come from the admin's settings (contact_* keys). */
   phone: "+880 1000-000000",
   email: "hello@petplex.com",

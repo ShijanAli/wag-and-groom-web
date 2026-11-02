@@ -41,7 +41,7 @@ export const METHOD_LABEL: Record<PaymentMethod, string> = {
   cash: "Cash",
   card: "Card",
   mobile_banking: "bKash / Nagad",
-  sslcommerz: "Online (SSLCommerz)",
+  sslcommerz: "Online",
 };
 
 export const METHOD_OPTIONS = (Object.keys(METHOD_LABEL) as PaymentMethod[]).map((v) => ({ value: v, label: METHOD_LABEL[v] }));

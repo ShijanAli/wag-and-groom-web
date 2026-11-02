@@ -12,7 +12,6 @@ import {
   Check,
   CheckCircle2,
   Clock,
-  CreditCard,
   Loader2,
   LogIn,
   PawPrint,
@@ -39,7 +38,7 @@ import { myPetHooks } from "@/features/pets/api";
 import { PetFields, petSchema, toPetForm, toPetInput } from "@/features/pets/PetFields";
 import { usePublicSettings } from "@/features/settings/api";
 import type { Booking, Pet, Service, Slot } from "@/types/models";
-import { bookingsApi, useAvailability, useCreateBooking, usePayOnline, type PromoPreview } from "./api";
+import { bookingsApi, useAvailability, useCreateBooking, type PromoPreview } from "./api";
 
 type Step = "service" | "pet" | "time" | "review" | "done";
 const STEPS: { key: Exclude<Step, "done">; label: string }[] = [
@@ -67,8 +66,8 @@ export interface BookingModalProps {
 }
 
 /**
- * The booking wizard: service → pet → date & slot → confirm → pay.
- * Everything comes from the API — live availability, promo validation, SSLCommerz payment.
+ * The booking wizard: service → pet → date & slot → confirm.
+ * Everything comes from the API — live availability and promo validation. Online payment is switched off.
  */
 export function BookingModal({ open, onOpenChange, serviceId }: BookingModalProps) {
   const { user, status } = useAuth();
@@ -531,7 +530,7 @@ function StepReview({ draft, onChange, onBooked }: { draft: Draft; onChange: (p:
         Confirm booking · {formatMoney(total)}
       </Button>
       <p className="text-center text-xs text-muted-foreground">
-        Pay within {settings.data?.booking_payment_timeout_minutes ?? 30} minutes to keep the slot. Free cancellation up to {settings.data?.booking_cancel_before_hours ?? 24}h before.
+        Free cancellation up to {settings.data?.booking_cancel_before_hours ?? 24}h before.
       </p>
     </div>
   );
@@ -540,7 +539,6 @@ function StepReview({ draft, onChange, onBooked }: { draft: Draft; onChange: (p:
 /* ───────────────────────── done ───────────────────────── */
 
 function StepDone({ booking, onClose }: { booking: Booking; onClose: () => void }) {
-  const pay = usePayOnline();
   return (
     <div className="space-y-6 py-2 text-center">
       <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/15">
@@ -554,19 +552,11 @@ function StepDone({ booking, onClose }: { booking: Booking; onClose: () => void 
         </p>
       </div>
       <div className="rounded-xl border bg-muted/40 p-4 text-sm">
-        Your slot is held. Pay <span className="font-semibold">{formatMoney(booking.totalAmount)}</span> now to confirm it, or pay at the counter.
+        Your booking is received — our team will confirm it shortly. The total is <span className="font-semibold">{formatMoney(booking.totalAmount)}</span>.
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-        <Button
-          className="sm:min-w-44"
-          disabled={pay.isPending}
-          onClick={() => pay.mutate({ bookingId: booking.id })}
-        >
-          {pay.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}
-          Pay now
-        </Button>
-        <Button variant="outline" asChild onClick={onClose}>
-          <Link href="/dashboard">Pay later · My bookings</Link>
+        <Button asChild onClick={onClose}>
+          <Link href="/dashboard">My bookings</Link>
         </Button>
       </div>
     </div>

@@ -12,7 +12,7 @@ interface Props {
 const HIGHLIGHTS = [
   { icon: CalendarCheck, text: "Book grooming, walking & spa in under a minute" },
   { icon: HeartHandshake, text: "Adopt a pet and follow every step of the process" },
-  { icon: ShieldCheck, text: "Secure payments with SSLCommerz" },
+  { icon: ShieldCheck, text: "Easy online booking" },
 ];
 
 export function AuthLayout({ title, subtitle, children, footer }: Props) {
