@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { LogIn, MailWarning } from "lucide-react";
+import { LogIn, MailWarning, Scissors, ShieldCheck, User, UserCog } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { ResendVerificationButton } from "@/components/auth/ResendVerification";
@@ -15,10 +16,31 @@ import { applyFieldErrors, getErrorMessage, getStatus } from "@/lib/api/errors";
 import { SITE } from "@/lib/site";
 import { loginSchema } from "@/features/auth/schemas";
 
+const DEMO_ACCOUNTS = [
+  { label: "Login as Super Admin", email: "demo@superadmin.com", password: "DemoSuperAdmin@123", icon: ShieldCheck },
+  { label: "Login as Admin", email: "demo@admin.com", password: "DemoAdmin@123", icon: UserCog },
+  { label: "Login as Staff", email: "demo@staff.com", password: "DemoStaff@123", icon: Scissors },
+  { label: "Login as Customer", email: "demo@customer.com", password: "DemoCustomer@123", icon: User },
+] as const;
+
 export default function LoginPage() {
   const { login } = useAuth();
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [demoLoading, setDemoLoading] = useState<string | null>(null);
   const form = useZodForm(loginSchema, { defaultValues: { email: "", password: "" } });
+
+  const demoLogin = async (account: (typeof DEMO_ACCOUNTS)[number]) => {
+    setDemoLoading(account.email);
+    setUnverifiedEmail(null);
+    try {
+      const user = await login(account.email, account.password);
+      toast.success(`Welcome, ${user.firstName}!`);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setDemoLoading(null);
+    }
+  };
 
   const onSubmit = async (values: { email: string; password: string }) => {
     setUnverifiedEmail(null);
@@ -73,6 +95,25 @@ export default function LoginPage() {
           Sign in
         </SubmitButton>
       </AppForm>
+
+      <div className="mt-6 space-y-3 border-t pt-5">
+        <p className="text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">Try a demo account — one click</p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {DEMO_ACCOUNTS.map((a) => (
+            <Button
+              key={a.email}
+              type="button"
+              variant="outline"
+              className="justify-start"
+              disabled={demoLoading !== null}
+              onClick={() => demoLogin(a)}
+            >
+              <a.icon className="mr-2 h-4 w-4" />
+              {demoLoading === a.email ? "Signing in…" : a.label}
+            </Button>
+          ))}
+        </div>
+      </div>
     </AuthLayout>
   );
 }
