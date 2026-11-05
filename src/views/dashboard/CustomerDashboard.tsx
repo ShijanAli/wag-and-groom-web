@@ -27,16 +27,15 @@ import { BookingModal } from "@/features/bookings/BookingModal";
 import { BookingBadges, BookingDetail, BookingFacts } from "@/features/bookings/components";
 import { canCustomerCancel, useCancelMyBooking, useMyBooking, useMyBookings } from "@/features/bookings/api";
 import { usePetTypeOptions } from "@/features/catalog/api";
-import { METHOD_LABEL, useMyPayments } from "@/features/payments/api";
+
 import { myPetHooks, petAge, type PetInput } from "@/features/pets/api";
 import { PetFields, petSchema, toPetForm, toPetInput, type PetForm } from "@/features/pets/PetFields";
 import { usePublicSettings } from "@/features/settings/api";
 import { BookingReviewButton, MyReviewsTab, ReviewFormModal, useMyReviewsByBooking, type ReviewTarget } from "@/features/reviews/MyReviews";
 import { useDisclosure } from "@/hooks/use-disclosure";
-import { PAYMENTS_ENABLED } from "@/lib/features";
-import type { Payment, Pet } from "@/types/models";
+import type { Pet } from "@/types/models";
 
-const TABS = ["bookings", "pets", "reviews", "adoptions", "favorites", ...(PAYMENTS_ENABLED ? (["payments"] as const) : []), "notifications", "profile"] as const;
+const TABS = ["bookings", "pets", "reviews", "adoptions", "favorites", "notifications", "profile"] as const;
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
@@ -83,7 +82,7 @@ export default function CustomerDashboard() {
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
             <TabsTrigger value="adoptions">Adoptions</TabsTrigger>
             <TabsTrigger value="favorites">Favourites</TabsTrigger>
-            {PAYMENTS_ENABLED && <TabsTrigger value="payments">Payments</TabsTrigger>}
+
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
@@ -92,7 +91,7 @@ export default function CustomerDashboard() {
           <TabsContent value="reviews">{tab === "reviews" && <MyReviewsTab />}</TabsContent>
           <TabsContent value="adoptions">{tab === "adoptions" && <MyAdoptionsTab />}</TabsContent>
           <TabsContent value="favorites">{tab === "favorites" && <MyFavoritesTab />}</TabsContent>
-          {PAYMENTS_ENABLED && <TabsContent value="payments">{tab === "payments" && <PaymentsTab />}</TabsContent>}
+
           <TabsContent value="notifications">{tab === "notifications" && <NotificationsCenter />}</TabsContent>
           <TabsContent value="profile">{tab === "profile" && <ProfileSettings />}</TabsContent>
         </Tabs>
@@ -326,37 +325,4 @@ function PetsTab() {
       </FormModal>
     </div>
   );
-}
-
-/* ───────────────────────── payments ───────────────────────── */
-
-function PaymentsTab() {
-  const list = useListParams({ defaults: { sortBy: "createdAt", sortOrder: "desc" } });
-  const query = useMyPayments(list.params);
-  const columns = useMemo<ColumnDef<Payment>[]>(
-    () => [
-      { id: "createdAt", header: "Date", enableSorting: true, cell: ({ row }) => formatDateTime(row.original.paidAt ?? row.original.createdAt) },
-      {
-        id: "booking",
-        header: "For",
-        cell: ({ row }) => <span className="font-mono text-xs">{row.original.booking?.bookingNo ?? (row.original.adoption ? "Adoption fee" : "—")}</span>,
-      },
-      { id: "method", header: "Method", cell: ({ row }) => (row.original.type === "refund" ? "Refund" : METHOD_LABEL[row.original.method]) },
-      {
-        id: "amount",
-        header: "Amount",
-        enableSorting: true,
-        cell: ({ row }) => (
-          <span className={cn("font-semibold", row.original.type === "refund" && "text-success")}>
-            {row.original.type === "refund" ? "+" : ""}
-            {formatMoney(row.original.amount, row.original.currency)}
-          </span>
-        ),
-      },
-      { id: "status", header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-      { id: "tx", header: "Transaction", cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.transactionId}</span> },
-    ],
-    [],
-  );
-  return <DataTable columns={columns} query={query} list={list} emptyTitle="No payments yet" emptyDescription="Payments for your bookings will show up here." />;
 }

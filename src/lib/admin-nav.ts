@@ -25,10 +25,8 @@ import {
   User,
   UserCog,
   Users,
-  Wallet,
   type LucideIcon,
 } from "lucide-react";
-import { PAYMENTS_ENABLED } from "@/lib/features";
 import { PERMISSIONS as P, type PermissionSlug } from "@/lib/permissions";
 
 export interface AdminNavItem {
@@ -49,13 +47,13 @@ export interface AdminNavGroup {
  * Single source of truth for the admin panel: the sidebar, the topbar menu search
  * and the per-route permission guard all read this list. New page = one entry here.
  */
-const ALL_NAV: AdminNavGroup[] = [
+export const ADMIN_NAV: AdminNavGroup[] = [
   {
     label: "Main",
     items: [
       { title: "Dashboard", url: "/admin", icon: LayoutDashboard, anyOf: [P.DASHBOARD.VIEW], keywords: ["home", "overview", "stats"] },
       { title: "Bookings", url: "/admin/bookings", icon: CalendarDays, anyOf: [P.BOOKING.VIEW], keywords: ["appointments", "schedule"] },
-      { title: "Payments", url: "/admin/payments", icon: Wallet, anyOf: [P.PAYMENT.VIEW], keywords: ["transactions", "refunds", "cash"] },
+
       { title: "Customers", url: "/admin/customers", icon: Users, anyOf: [P.USER.VIEW], keywords: ["clients", "users"] },
       { title: "Pets", url: "/admin/pets", icon: Dog, anyOf: [P.PET.VIEW], keywords: ["customer pets", "animals", "vaccinated"] },
     ],
@@ -139,8 +137,6 @@ const ALL_NAV: AdminNavGroup[] = [
   },
 ];
 
-/** The Payments page is left out while payments are switched off (see `@/lib/features`). */
-export const ADMIN_NAV: AdminNavGroup[] = PAYMENTS_ENABLED ? ALL_NAV : ALL_NAV.map((g) => ({ ...g, items: g.items.filter((i) => i.url !== "/admin/payments") }));
 
 export const ADMIN_NAV_ITEMS = ADMIN_NAV.flatMap((g) => g.items.map((i) => ({ ...i, group: g.label })));
 

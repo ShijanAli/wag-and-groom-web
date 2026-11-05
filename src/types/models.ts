@@ -203,7 +203,7 @@ export interface Permission {
   description?: string | null;
 }
 
-/* ───────────────────────── bookings & payments (F3) ───────────────────────── */
+/* ───────────────────────── bookings (F3) ───────────────────────── */
 
 export type PetGender = "male" | "female";
 export type PetSize = "small" | "medium" | "large";
@@ -227,10 +227,7 @@ export interface Pet {
 }
 
 export type BookingStatus = "pending" | "confirmed" | "in_progress" | "completed" | "cancelled" | "no_show";
-export type BookingPaymentStatus = "unpaid" | "partial" | "paid" | "refunded";
 export type Currency = "BDT" | "USD";
-export type PaymentMethod = "cash" | "card" | "mobile_banking" | "sslcommerz";
-export type TransactionStatus = "pending" | "success" | "failed" | "cancelled" | "refunded";
 
 export interface BookingStatusLog {
   id: number;
@@ -239,19 +236,6 @@ export interface BookingStatusLog {
   note: string | null;
   createdAt: ISODate;
   changedBy: { id: number; firstName: string; lastName: string } | null;
-}
-
-export interface BookingPaymentLine {
-  id: number;
-  type: "payment" | "refund";
-  method: PaymentMethod;
-  status: TransactionStatus;
-  amount: Money;
-  currency: Currency;
-  baseAmount: Money;
-  transactionId: string;
-  paidAt: ISODate | null;
-  createdAt: ISODate;
 }
 
 export interface Booking {
@@ -268,7 +252,6 @@ export interface Booking {
   discountAmount: Money;
   totalAmount: Money;
   status: BookingStatus;
-  paymentStatus: BookingPaymentStatus;
   customerNote: string | null;
   cancelledAt: ISODate | null;
   cancelReason: string | null;
@@ -280,30 +263,6 @@ export interface Booking {
   user?: { id: number; firstName: string; lastName: string; email: string; phone: string | null };
   /** detail endpoints only */
   statusLogs?: BookingStatusLog[];
-  payments?: BookingPaymentLine[];
-}
-
-export interface Payment {
-  id: number;
-  userId: number;
-  bookingId: number | null;
-  adoptionId: number | null;
-  amount: Money;
-  currency: Currency;
-  exchangeRate: string;
-  baseAmount: Money;
-  method: PaymentMethod;
-  transactionId: string;
-  type: "payment" | "refund";
-  status: TransactionStatus;
-  note: string | null;
-  paidAt: ISODate | null;
-  createdAt: ISODate;
-  booking: { id: number; bookingNo: string; status: BookingStatus; totalAmount: Money } | null;
-  adoption: { id: number } | null;
-  user?: { id: number; firstName: string; lastName: string; email: string };
-  refundOf: { id: number; transactionId: string } | null;
-  refunds?: { id: number; amount: Money; status: TransactionStatus }[];
 }
 
 export interface Slot {
@@ -324,11 +283,9 @@ export interface Availability {
 export interface PublicSettings {
   site_name: string;
   base_currency: Currency;
-  supported_currencies: Currency[];
-  usd_exchange_rate: number;
   booking_advance_days: number;
   booking_cancel_before_hours: number;
-  booking_payment_timeout_minutes: number;
+
   contact_address: string;
   contact_email: string;
   contact_phone: string;
@@ -413,7 +370,7 @@ export interface AdoptionApplication {
   adminNote: string | null;
   createdAt: ISODate;
   adoptionPet: AdoptionPetSummary;
-  adoption: { id: number; status: AdoptionStatus; feeAmount: Money; feePaid: Money } | null;
+  adoption: { id: number; status: AdoptionStatus; feeAmount: Money } | null;
   user?: { id: number; firstName: string; lastName: string; email: string; phone: string | null; address: string | null };
   reviewedBy?: { id: number; firstName: string; lastName: string } | null;
 }
@@ -426,8 +383,6 @@ export interface Adoption {
   status: AdoptionStatus;
   adoptionDate: string; // YYYY-MM-DD
   feeAmount: Money;
-  feePaid: Money;
-  feeDue: number;
   contractFile: string | null;
   followUpDate: string | null;
   completedAt: ISODate | null;
@@ -437,8 +392,6 @@ export interface Adoption {
   adoptionPet: AdoptionPetSummary;
   application: { id: number; applicationNo: string };
   user?: { id: number; firstName: string; lastName: string; email: string; phone?: string | null };
-  /** detail endpoints */
-  payments?: BookingPaymentLine[];
 }
 
 export interface FavoritePet extends Omit<AdoptionPet, "images" | "isFavorite"> {
@@ -620,28 +573,29 @@ export interface DashboardStats {
   currency: Currency;
   users: { customers: number; staff: number; newCustomersThisMonth: number };
   bookings: { today: number; upcoming: number; pending: number; completedThisMonth: number };
-  revenue: { thisMonth: number; lastMonth: number; total: number; growthPercent: number | null };
+  /** sum of totals of completed bookings (by booking date) */
+  bookingValue: { thisMonth: number; lastMonth: number; total: number; growthPercent: number | null };
   adoption: { availablePets: number; pendingApplications: number; inProgress: number; completedThisMonth: number };
   reviews: { pending: number; averageRating: number | null };
   inbox: { newMessages: number; subscribers: number };
 }
 
-export interface RevenuePoint {
+export interface BookingValuePoint {
   period: string;
-  bookings: number;
-  adoptions: number;
-  total: number;
-  /** number of successful payments in the period */
-  payments: number;
+  /** completed bookings in the period */
+  completed: number;
+  /** sum of their totals (BDT) */
+  value: number;
 }
 
-export interface RevenueReport {
+export interface BookingValueReport {
   from: string;
   to: string;
   groupBy: "day" | "month";
   currency: Currency;
+  completed: number;
   total: number;
-  series: RevenuePoint[];
+  series: BookingValuePoint[];
 }
 
 export interface TopService {
@@ -652,7 +606,7 @@ export interface TopService {
 
 export type BookingsByStatus = Record<BookingStatus, number>;
 
-export type SettingGroup = "general" | "payment" | "booking" | "notification";
+export type SettingGroup = "general" | "booking" | "notification";
 
 export interface Setting {
   id: number;

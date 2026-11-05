@@ -17,8 +17,8 @@ import { formatMoney, formatTime, toApiDate } from "@/lib/format";
 import { PERMISSIONS as P } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { BOOKING_STATUS_OPTIONS, useAdminBookings } from "@/features/bookings/api";
-import { RevenueChart } from "@/features/system/RevenueChart";
-import { useBookingsByStatus, useDashboardStats, useRevenue, useTopServices } from "@/features/system/api";
+import { BookingValueChart } from "@/features/system/BookingValueChart";
+import { useBookingValue, useBookingsByStatus, useDashboardStats, useTopServices } from "@/features/system/api";
 import type { BookingStatus } from "@/types/models";
 
 const RANGES = [
@@ -47,7 +47,7 @@ export default function AdminDashboard() {
   const { from, to } = range;
 
   const stats = useDashboardStats();
-  const revenue = useRevenue(range);
+  const value = useBookingValue(range);
   const byStatus = useBookingsByStatus({ from, to });
   const top = useTopServices({ from, to });
   const s = stats.data;
@@ -89,13 +89,13 @@ export default function AdminDashboard() {
       {/* KPIs (always "now", independent of the chart period) */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Revenue this month"
+          label="Booking value this month"
           icon={Wallet}
           loading={!s}
-          value={s && formatMoney(s.revenue.thisMonth)}
-          trend={s?.revenue.growthPercent}
-          hint={s && `vs ${formatMoney(s.revenue.lastMonth)} last month`}
-          href={can(P.PAYMENT.VIEW) ? "/admin/payments" : undefined}
+          value={s && formatMoney(s.bookingValue.thisMonth)}
+          trend={s?.bookingValue.growthPercent}
+          hint={s && `completed bookings · vs ${formatMoney(s.bookingValue.lastMonth)} last month`}
+          href={can(P.BOOKING.VIEW) ? "/admin/bookings?status=completed" : undefined}
         />
         <StatCard
           label="Bookings today"
@@ -126,11 +126,11 @@ export default function AdminDashboard() {
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader className="pb-2">
-            <CardDescription>Net revenue · {RANGES.find((r) => r.key === rangeKey)!.label}</CardDescription>
-            <CardTitle className="font-display text-3xl tabular-nums">{revenue.data ? formatMoney(revenue.data.total) : <Skeleton className="h-9 w-40" />}</CardTitle>
+            <CardDescription>Completed booking value · {RANGES.find((r) => r.key === rangeKey)!.label}</CardDescription>
+            <CardTitle className="font-display text-3xl tabular-nums">{value.data ? formatMoney(value.data.total) : <Skeleton className="h-9 w-40" />}</CardTitle>
           </CardHeader>
-          <CardContent className={cn(revenue.isPlaceholderData && "opacity-60 transition-opacity")}>
-            {revenue.data ? <RevenueChart report={revenue.data} /> : <Skeleton className="h-80 w-full" />}
+          <CardContent className={cn(value.isPlaceholderData && "opacity-60 transition-opacity")}>
+            {value.data ? <BookingValueChart report={value.data} /> : <Skeleton className="h-80 w-full" />}
           </CardContent>
         </Card>
 

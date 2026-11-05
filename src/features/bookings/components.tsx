@@ -6,42 +6,27 @@ import { DetailList } from "@/components/common/DetailList";
 import { StatusBadge, humanize } from "@/components/common/StatusBadge";
 import { fullName } from "@/lib/auth";
 import { formatDateTime, formatMoney, formatTime } from "@/lib/format";
-import { PAYMENTS_ENABLED } from "@/lib/features";
 import { cn } from "@/lib/utils";
-import { METHOD_LABEL } from "@/features/payments/api";
-import type { Booking, BookingPaymentLine, BookingPaymentStatus } from "@/types/models";
-
-const PAYMENT_LABEL: Record<BookingPaymentStatus, string> = { unpaid: "Unpaid", partial: "Partly paid", paid: "Paid", refunded: "Refunded" };
+import type { Booking } from "@/types/models";
 
 export const bookingDay = (b: Pick<Booking, "bookingDate">, pattern = "EEE, d MMM yyyy") => format(parse(b.bookingDate, "yyyy-MM-dd", new Date()), pattern);
 export const bookingWhen = (b: Pick<Booking, "bookingDate" | "startTime" | "endTime">) => `${bookingDay(b)} · ${formatTime(b.startTime)}–${formatTime(b.endTime)}`;
 
-export function PaymentBadge({ status }: { status: BookingPaymentStatus }) {
-  return <StatusBadge status={status} label={PAYMENT_LABEL[status]} />;
-}
-
-/** Booking status + payment status side by side. */
-export function BookingBadges({ booking }: { booking: Pick<Booking, "status" | "paymentStatus"> }) {
+/** Booking status badge. */
+export function BookingBadges({ booking }: { booking: Pick<Booking, "status"> }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       <StatusBadge status={booking.status} />
-      {PAYMENTS_ENABLED && booking.status !== "cancelled" && <PaymentBadge status={booking.paymentStatus} />}
     </div>
   );
 }
 
-/** Totals block: price, discount, total, paid, due. */
+/** Totals block: price, discount, total. */
 export function BookingTotals({ booking }: { booking: Booking }) {
-  const paid = (booking.payments ?? []).filter((p) => p.type === "payment" && p.status === "success").reduce((s, p) => s + Number(p.baseAmount), 0);
-  const refunded = (booking.payments ?? []).filter((p) => p.type === "refund" && p.status === "success").reduce((s, p) => s + Number(p.baseAmount), 0);
-  const due = Math.max(0, Number(booking.totalAmount) - paid);
   const rows: [string, string, string?][] = [
     ["Service price", formatMoney(booking.servicePrice)],
     ...(Number(booking.discountAmount) > 0 ? ([[`Discount${booking.promotion ? ` (${booking.promotion.code})` : ""}`, `−${formatMoney(booking.discountAmount)}`, "text-success"]] as [string, string, string][]) : []),
     ["Total", formatMoney(booking.totalAmount), "font-semibold"],
-    ...(PAYMENTS_ENABLED && booking.payments ? ([["Paid", formatMoney(paid)]] as [string, string][]) : []),
-    ...(PAYMENTS_ENABLED && refunded > 0 ? ([["Refunded", formatMoney(refunded)]] as [string, string][]) : []),
-    ...(PAYMENTS_ENABLED && booking.payments && booking.status !== "cancelled" ? ([["Due", formatMoney(due), due > 0 ? "font-semibold text-destructive" : "text-success"]] as [string, string, string][]) : []),
   ];
   return (
     <dl className="space-y-1.5 rounded-xl bg-muted/50 p-4 text-sm">
@@ -75,30 +60,6 @@ export function BookingTimeline({ booking }: { booking: Booking }) {
   );
 }
 
-/** Payment / refund lines of a booking or an adoption. */
-export function PaymentLines({ payments }: { payments: BookingPaymentLine[] | undefined }) {
-  const lines = payments ?? [];
-  if (!lines.length) return <p className="text-sm text-muted-foreground">No payments yet.</p>;
-  return (
-    <ul className="divide-y rounded-xl border">
-      {lines.map((p) => (
-        <li key={p.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
-          <div className="min-w-0">
-            <p className="font-medium">
-              {p.type === "refund" ? "Refund" : METHOD_LABEL[p.method]} · {formatMoney(p.amount, p.currency)}
-            </p>
-            <p className="truncate font-mono text-xs text-muted-foreground">{p.transactionId}</p>
-          </div>
-          <div className="shrink-0 text-right">
-            <StatusBadge status={p.status} />
-            <p className="mt-0.5 text-xs text-muted-foreground">{formatDateTime(p.paidAt ?? p.createdAt)}</p>
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 /** Full booking detail used in the customer modal and the admin side panel. */
 export function BookingDetail({ booking, showCustomer = false }: { booking: Booking; showCustomer?: boolean }) {
   return (
@@ -121,12 +82,7 @@ export function BookingDetail({ booking, showCustomer = false }: { booking: Book
         ]}
       />
       <BookingTotals booking={booking} />
-      {PAYMENTS_ENABLED && (
-        <section className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Payments</h3>
-          <PaymentLines payments={booking.payments} />
-        </section>
-      )}
+
       <section className="space-y-3">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">History</h3>
         <BookingTimeline booking={booking} />

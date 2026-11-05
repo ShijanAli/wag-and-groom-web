@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, CalendarDays, CheckCheck, ClipboardList, CreditCard, HeartHandshake, Star, Trash2, type LucideIcon } from "lucide-react";
+import { Bell, CalendarDays, CheckCheck, ClipboardList, HeartHandshake, Star, Trash2, type LucideIcon } from "lucide-react";
 import { DataTablePagination } from "@/components/common/data-table";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ const ICONS: [RegExp, LucideIcon][] = [
   [/^adoption_application/, ClipboardList],
   [/^adoption/, HeartHandshake],
   [/^review/, Star],
-  [/^payment/, CreditCard],
+
 ];
 const iconFor = (type: string) => ICONS.find(([re]) => re.test(type))?.[1] ?? Bell;
 
@@ -63,7 +63,7 @@ export function NotificationsCenter() {
       {q.isPending ? (
         <Skeleton className="h-64 w-full rounded-xl" />
       ) : !rows.length ? (
-        <EmptyState icon={Bell} title={onlyUnread ? "No unread notifications" : "No notifications yet"} description="Updates about bookings, payments, adoptions and reviews show up here." className="bg-card" />
+        <EmptyState icon={Bell} title={onlyUnread ? "No unread notifications" : "No notifications yet"} description="Updates about bookings, adoptions and reviews show up here." className="bg-card" />
       ) : (
         <ul className={cn("divide-y overflow-hidden rounded-xl border bg-card transition-opacity", q.isPlaceholderData && "opacity-60")}>
           {rows.map((n) => (

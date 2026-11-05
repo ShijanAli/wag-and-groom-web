@@ -9,7 +9,7 @@ npm run dev                  # http://localhost:8080
 ```
 
 In the backend `.env`, set `CLIENT_URLS=http://localhost:8080` (for CORS and cookies) and
-`CLIENT_URL=http://localhost:8080` (for email links and payment redirects).
+`CLIENT_URL=http://localhost:8080` (for email links).
 
 ## Folder layout
 
@@ -98,7 +98,7 @@ What you get with no extra code:
 - Cache invalidation after mutations.
 - A confirm dialog with a spinner that stays open if the request fails.
 
-## Bookings & payments (F3)
+## Bookings (F3)
 
 - **Services page** (`/services`) is rendered on the server from the API, with ISR every 5 minutes. That
   makes it good for SEO (JSON-LD offers in BDT), and it falls back to an empty state if the API is down.
@@ -108,18 +108,12 @@ What you get with no extra code:
   3. Date & time — live `/services/:id/availability`, with an optional staff choice
   4. Confirm — promo code is checked with `/promotions/validate`
 
-  After confirming, it creates the booking and the customer chooses **Pay now** (SSLCommerz) or **Pay later**.
-- **SSLCommerz flow:**
-  1. `POST /payments/init` returns `gatewayUrl`, and the browser goes to that hosted page.
-  2. The gateway posts back to the backend, which verifies the payment server-side.
-  3. The backend redirects with 303 to `/payment/success|failed|cancelled?tranId&bookingNo`.
-  4. That page only *shows* the result (and "Try again" when allowed).
+  After confirming, it creates the booking (status `pending`). There is no online payment; the business
+  takes payment at the studio.
 - **Status changes** use `StatusActions`, which follows the same `STATUS_TRANSITIONS` as the backend.
   Cancel and no-show ask for a reason first. The same component is used by staff (`/staff`) and admins
   (`/admin/bookings`).
-- **Counter payments and refunds** use `RecordPaymentModal` and `RefundModal` (`features/payments`). The
-  amount defaults to what is due or what can still be refunded.
-- **Cache scope:** one `["bookings"]` scope covers every booking list. Any booking or payment change refreshes
+- **Cache scope:** one `["bookings"]` scope covers every booking list. Any booking change refreshes
   the customer, staff and admin views together.
 
 ## Adoption (F4)
@@ -139,9 +133,7 @@ What you get with no extra code:
   1. Customer applies.
   2. Admin moves it to Under review, then Approves or Rejects. Approving creates the adoption and rejects the
      other open applications.
-  3. Fee is paid at the counter (`RecordPaymentModal` with `adoptionId`) or online (`usePayOnline({ adoptionId })`).
-     The online result comes back to `/payment/success?applicationNo=…`.
-  4. Admin completes the handover. The API refuses until the fee is fully paid, so the button stays disabled.
+  3. Admin completes the handover (any adoption fee is settled offline) and the pet is marked adopted.
 - **Photos:** a new pet takes photos in the create form (`MultiImageUploadField`, first = cover). For an
   existing pet, use the Photos dialog (add, make cover, remove).
 - **API images** use plain `<img loading="lazy">` with `cdn(url, w, h)`, which asks Cloudinary for a resized
@@ -178,7 +170,7 @@ What you get with no extra code:
 
 | Page | API | Notes |
 | --- | --- | --- |
-| `/admin` dashboard | `/dashboard/stats`, `/revenue`, `/top-services`, `/bookings-by-status`, today's bookings | KPI cards are "now"; the chart/bars follow the 7d / 30d / 90d / 12m period (`?range=`, month buckets for 12m). "Needs attention" links straight to the filtered queues. |
+| `/admin` dashboard | `/dashboard/stats`, `/booking-value`, `/top-services`, `/bookings-by-status`, today's bookings | KPI cards are "now"; the chart/bars follow the 7d / 30d / 90d / 12m period (`?range=`, month buckets for 12m). "Needs attention" links straight to the filtered queues. |
 | `/admin/users` | `/users`, `/users/:id/role`, `/users/:id/status` | Every account; create with any role, change role, activate/deactivate/block. No role/status/delete actions on your own account. |
 | `/admin/customers` | + `/pets?userId`, `/bookings?userId`, `/adoption-applications?userId` | Row click opens the 360° `CustomerDetailModal` (profile, pets, bookings, applications — each tab permission-gated). |
 | `/admin/pets` | `/pets` | Customers' pets, read-only; owner profile from the row menu. |
@@ -187,7 +179,7 @@ What you get with no extra code:
 | `/admin/activity-log` | `/activity-logs` | Module / action / date filters; detail modal shows the request and the data sent. |
 | Notifications | `/me/notifications` | `NotificationsCenter` is shared by `/admin/notifications`, `/staff?tab=notifications` and `/dashboard?tab=notifications`. `notificationHref()` maps a notification's `data` to the right page per panel; the bell uses the same mapping and links to the full page. |
 
-**Charts** (`features/system/RevenueChart.tsx`): two-series stacked bars using `--viz-1` / `--viz-2` (validated with the dataviz palette checker for light and dark surfaces), legend always shown, tooltip with both values + net, and a Table toggle as the accessible fallback.
+**Charts** (`features/system/BookingValueChart.tsx`): single-series bars (`--viz-1`, validated with the dataviz palette checker for light and dark surfaces) of completed-booking value per day / month, a tooltip with value + count, and a Table toggle as the accessible fallback.
 
 **Shared pieces added**: `StatCard`, `useUserStatusActions` + `userProfileFields` / `userCreateFields` (now used by Customers, Staff and Users), `CustomerDetailModal`, `NotificationsCenter`, `PromoBanner`.
 

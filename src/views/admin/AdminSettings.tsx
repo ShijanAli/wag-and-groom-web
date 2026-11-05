@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import { useFormContext, useFormState, useWatch } from "react-hook-form";
-import { CalendarClock, Clock, Copy, CreditCard, Globe, Lock, Mail, Save, Undo2 } from "lucide-react";
+import { CalendarClock, Clock, Copy, Globe, Mail, Save, Undo2 } from "lucide-react";
 import { z } from "zod";
 import { AppForm, useZodForm } from "@/components/common/form/AppForm";
 import { FieldRow, SelectField, TextField } from "@/components/common/form/fields";
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
 import { timeAgo } from "@/lib/format";
-import { PAYMENTS_ENABLED } from "@/lib/features";
+
 import { PERMISSIONS as P } from "@/lib/permissions";
 import { useSettings, useUpdateSettings } from "@/features/system/api";
 import { Switch } from "@/components/ui/switch";
@@ -37,8 +37,7 @@ const schema = z.object({
   booking_slot_interval_minutes: z.number(),
   booking_cancel_before_hours: int(0, 720),
   booking_advance_days: int(1, 365),
-  booking_payment_timeout_minutes: int(0, 1440),
-  usd_exchange_rate: z.number({ invalid_type_error: "Enter a number" }).positive("Must be greater than 0").max(10_000),
+
   admin_notification_email: z.string().trim().email("Enter a valid email"),
   // index = weekday (0 = Sunday), same rules as the backend
   opening_hours: z
@@ -67,8 +66,7 @@ function toForm(values: Values): z.input<typeof schema> {
     booking_slot_interval_minutes: Number(values.booking_slot_interval_minutes ?? 30),
     booking_cancel_before_hours: Number(values.booking_cancel_before_hours ?? 24),
     booking_advance_days: Number(values.booking_advance_days ?? 30),
-    booking_payment_timeout_minutes: Number(values.booking_payment_timeout_minutes ?? 30),
-    usd_exchange_rate: Number(values.usd_exchange_rate ?? 0),
+
     admin_notification_email: String(values.admin_notification_email ?? ""),
     opening_hours: [0, 1, 2, 3, 4, 5, 6].map((day) => {
       const week = Array.isArray(values.opening_hours) ? (values.opening_hours as OpeningDay[]) : DEFAULT_OPENING_HOURS;
@@ -138,26 +136,10 @@ function SettingsForm({ values, byKey, readOnly }: { values: Values; byKey: Map<
             <TextField name="booking_advance_days" label="Book up to (days ahead)" type="number" min={1} max={365} description={hint("booking_advance_days")} />
             <TextField name="booking_cancel_before_hours" label="Free cancellation (hours before)" type="number" min={0} max={720} description={hint("booking_cancel_before_hours")} />
           </FieldRow>
-          {PAYMENTS_ENABLED && <TextField name="booking_payment_timeout_minutes" label="Unpaid booking timeout (minutes)" type="number" min={0} max={1440} description={hint("booking_payment_timeout_minutes")} />}
+
         </Section>
 
         <div className="space-y-6">
-          {PAYMENTS_ENABLED && (
-          <Section icon={CreditCard} title="Payments">
-            <TextField name="usd_exchange_rate" label="USD exchange rate" type="number" step="0.01" min={0} leading="৳" description={hint("usd_exchange_rate")} />
-            <dl className="grid gap-3 rounded-xl bg-muted/50 p-4 text-sm sm:grid-cols-2">
-              {(["base_currency", "supported_currencies"] as const).map((k) => (
-                <div key={k}>
-                  <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Lock className="h-3 w-3" aria-hidden /> {k === "base_currency" ? "Base currency" : "Accepted currencies"}
-                  </dt>
-                  <dd className="font-medium">{Array.isArray(values[k]) ? (values[k] as string[]).join(", ") : String(values[k] ?? "—")}</dd>
-                </div>
-              ))}
-              <p className="text-xs text-muted-foreground sm:col-span-2">Fixed by the system — prices are stored in BDT.</p>
-            </dl>
-          </Section>
-          )}
           <Section icon={Clock} title="Opening hours" description="Shown in the website footer, the contact section (with an “Open now” badge) and Google results. Times are Dhaka time.">
             <OpeningHoursEditor />
           </Section>

@@ -29,7 +29,7 @@ export interface PromoPreview {
 
 /** One cache scope for every booking view (customer, staff, admin) so any change refreshes all of them. */
 export const bookingKeys = createKeys("bookings");
-const invalidate = [bookingKeys.all, ["payments"], ["my-payments"]];
+const invalidate = [bookingKeys.all];
 
 export const bookingsApi = {
   // customer
@@ -115,12 +115,6 @@ export const BOOKING_STATUS_OPTIONS: Option<BookingStatus>[] = (["pending", "con
   (s) => ({ value: s, label: s === "no_show" ? "No-show" : s === "in_progress" ? "In progress" : s[0].toUpperCase() + s.slice(1) }),
 );
 
-export const PAYMENT_STATUS_OPTIONS = [
-  { value: "unpaid", label: "Unpaid" },
-  { value: "partial", label: "Partly paid" },
-  { value: "paid", label: "Paid" },
-  { value: "refunded", label: "Refunded" },
-];
 
 /** Booking start as a Date in the business timezone (Asia/Dhaka, UTC+6, no DST). */
 export const bookingStart = (b: Pick<Booking, "bookingDate" | "startTime">) => new Date(`${b.bookingDate}T${b.startTime}:00+06:00`);
@@ -130,9 +124,3 @@ export function canCustomerCancel(b: Booking, cancelBeforeHours: number) {
   if (!CUSTOMER_CANCELLABLE.includes(b.status)) return false;
   return bookingStart(b).getTime() - Date.now() >= cancelBeforeHours * 3_600_000;
 }
-
-/** Amount still to pay (BDT). */
-export const dueAmount = (b: Pick<Booking, "totalAmount" | "payments">, paid?: number) => {
-  const p = paid ?? (b.payments ?? []).filter((x) => x.type === "payment" && x.status === "success").reduce((s, x) => s + Number(x.baseAmount), 0);
-  return Math.max(0, Math.round((Number(b.totalAmount) - p) * 100) / 100);
-};

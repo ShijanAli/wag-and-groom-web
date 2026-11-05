@@ -8,9 +8,8 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDate, formatDay, formatMoney } from "@/lib/format";
+import { formatDate, formatDay } from "@/lib/format";
 import { cdn } from "@/lib/image";
-import { PAYMENTS_ENABLED } from "@/lib/features";
 import type { AdoptionApplication, AdoptionPetSummary } from "@/types/models";
 import { useMyAdoptions, useMyApplications, useMyFavorites, useWithdrawApplication } from "./api";
 import { AdoptionPetCard, feeLabel } from "./components";
@@ -60,7 +59,7 @@ export function MyAdoptionsTab() {
       {rows.map((app: AdoptionApplication) => {
         const ad = app.adoption;
         const full = ad ? adoptionById.get(ad.id) : undefined;
-        const due = ad ? Math.max(0, Number(ad.feeAmount) - Number(ad.feePaid)) : 0;
+
         const open = ["pending", "under_review"].includes(app.status);
         return (
           <Card key={app.id}>
@@ -106,13 +105,6 @@ export function MyAdoptionsTab() {
                   <div className="space-y-0.5">
                     <p>
                       Adoption fee <span className="font-semibold">{feeLabel(ad.feeAmount)}</span>
-                      {PAYMENTS_ENABLED && (
-                        <>
-                          {" "}
-                          · paid {formatMoney(ad.feePaid)}
-                          {due > 0 && <span className="font-semibold text-destructive"> · due {formatMoney(due)}</span>}
-                        </>
-                      )}
                     </p>
                     {full && (
                       <p className="text-muted-foreground">

@@ -17,7 +17,7 @@ export interface FaqInput {
 export const faqHooks = createResourceHooks("faqs", createResource<Faq, FaqInput>("/faqs"));
 
 /** Suggested FAQ groups (free text on the backend, these keep it consistent). */
-export const FAQ_CATEGORY_OPTIONS = ["general", "booking", "payment", "adoption", "grooming"].map((v) => ({ value: v, label: v[0].toUpperCase() + v.slice(1) }));
+export const FAQ_CATEGORY_OPTIONS = ["general", "booking", "adoption", "grooming"].map((v) => ({ value: v, label: v[0].toUpperCase() + v.slice(1) }));
 
 /* ───── Testimonials ───── */
 export interface TestimonialInput {

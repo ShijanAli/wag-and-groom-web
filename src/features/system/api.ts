@@ -4,7 +4,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createKeys, createResourceHooks, useApiMutation } from "@/lib/api/hooks";
 import { api, createResource } from "@/lib/api/request";
 import type { Id } from "@/lib/api/types";
-import type { ActiveStatus, ActivityLog, BookingsByStatus, DashboardStats, Permission, RevenueReport, Role, Setting, TopService } from "@/types/models";
+import type { ActiveStatus, ActivityLog, BookingValueReport, BookingsByStatus, DashboardStats, Permission, Role, Setting, TopService } from "@/types/models";
 
 /* ───── dashboard ───── */
 export interface DateRange {
@@ -16,8 +16,8 @@ const dashKeys = createKeys("dashboard");
 const dashOpts = { staleTime: 60_000, placeholderData: keepPreviousData } as const;
 
 export const useDashboardStats = () => useQuery({ queryKey: [...dashKeys.all, "stats"], queryFn: () => api.get<DashboardStats>("/dashboard/stats"), staleTime: 60_000, refetchInterval: 5 * 60_000 });
-export const useRevenue = (range: DateRange & { groupBy: "day" | "month" }) =>
-  useQuery({ queryKey: [...dashKeys.all, "revenue", range], queryFn: () => api.get<RevenueReport>("/dashboard/revenue", { ...range }), ...dashOpts });
+export const useBookingValue = (range: DateRange & { groupBy: "day" | "month" }) =>
+  useQuery({ queryKey: [...dashKeys.all, "booking-value", range], queryFn: () => api.get<BookingValueReport>("/dashboard/booking-value", { ...range }), ...dashOpts });
 export const useTopServices = (range: DateRange) =>
   useQuery({ queryKey: [...dashKeys.all, "top", range], queryFn: () => api.get<TopService[]>("/dashboard/top-services", { ...range, limit: 5 }), ...dashOpts });
 export const useBookingsByStatus = (range: DateRange) =>
@@ -88,7 +88,6 @@ export const LOG_MODULES = [
   "FAQs",
   "Gallery",
   "Newsletter",
-  "Payments",
   "Pet Types",
   "Promotions",
   "Reviews",

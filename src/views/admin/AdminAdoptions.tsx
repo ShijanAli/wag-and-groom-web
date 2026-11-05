@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Ban, Banknote, CalendarClock, CheckCheck, FileText, PawPrint } from "lucide-react";
+import { Ban, CalendarClock, CheckCheck, FileText, PawPrint } from "lucide-react";
 import { z } from "zod";
 import { Can } from "@/components/common/Can";
 import { DataTable, DataTableToolbar, TableDateRange, TableFilter } from "@/components/common/data-table";
@@ -20,14 +20,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDisclosure } from "@/hooks/use-disclosure";
 import { useListParams } from "@/hooks/use-list-params";
 import { fullName } from "@/lib/auth";
-import { formatDateTime, formatDay, formatMoney, toApiDate } from "@/lib/format";
+import { formatDateTime, formatDay, toApiDate } from "@/lib/format";
 import { cdn } from "@/lib/image";
 import { PERMISSIONS as P } from "@/lib/permissions";
 import { ADOPTION_STATUS_OPTIONS, useAdoption, useAdoptions, useCancelAdoption, useCompleteAdoption, useUpdateAdoption } from "@/features/adoption/api";
 import { feeLabel } from "@/features/adoption/components";
-import { PaymentLines } from "@/features/bookings/components";
-import { RecordPaymentModal } from "@/features/payments/PaymentModals";
-import { PAYMENTS_ENABLED } from "@/lib/features";
+
 import type { Adoption } from "@/types/models";
 
 const STATUS_LABEL: Record<string, string> = { in_progress: "In progress" };
@@ -79,7 +77,6 @@ export default function AdminAdoptions() {
           return (
             <div className="whitespace-nowrap">
               <p className="font-semibold">{feeLabel(a.feeAmount)}</p>
-              {PAYMENTS_ENABLED && <p className={a.feeDue > 0 ? "text-xs font-medium text-destructive" : "text-xs text-success"}>{a.feeDue > 0 ? `${formatMoney(a.feeDue)} due` : "Paid"}</p>}
             </div>
           );
         },
@@ -93,7 +90,7 @@ export default function AdminAdoptions() {
 
   return (
     <>
-      <PageHeader title="Adoptions" description="Approved applications: collect the fee, hand the pet over, schedule a follow-up." />
+      <PageHeader title="Adoptions" description="Approved applications: hand the pet over and schedule a follow-up." />
       <DataTable
         columns={columns}
         query={query}
@@ -120,7 +117,6 @@ export default function AdminAdoptions() {
 
 function AdoptionModal({ id, open, onOpenChange }: { id: number | null; open: boolean; onOpenChange: (o: boolean) => void }) {
   const q = useAdoption(open ? id : null);
-  const pay = useDisclosure();
   const dates = useDisclosure();
   const complete = useDisclosure();
   const cancel = useDisclosure();
@@ -143,13 +139,7 @@ function AdoptionModal({ id, open, onOpenChange }: { id: number | null; open: bo
           <Can permission={P.ADOPTION.UPDATE}>
             <div className="flex w-full flex-wrap justify-between gap-2">
               <div className="flex flex-wrap gap-2">
-                <Can permission={P.PAYMENT.CREATE}>
-                  {PAYMENTS_ENABLED && a.feeDue > 0 && (
-                    <Button variant="outline" size="sm" onClick={() => pay.open()}>
-                      <Banknote className="mr-1.5 h-4 w-4" /> Record fee
-                    </Button>
-                  )}
-                </Can>
+
                 <Button variant="outline" size="sm" onClick={() => dates.open()}>
                   <CalendarClock className="mr-1.5 h-4 w-4" /> Dates & contract
                 </Button>
@@ -157,7 +147,7 @@ function AdoptionModal({ id, open, onOpenChange }: { id: number | null; open: bo
                   <Ban className="mr-1.5 h-4 w-4" /> Cancel
                 </Button>
               </div>
-              <Button size="sm" disabled={PAYMENTS_ENABLED && a.feeDue > 0} title={PAYMENTS_ENABLED && a.feeDue > 0 ? "Collect the full fee first" : undefined} onClick={() => complete.open()}>
+              <Button size="sm" onClick={() => complete.open()}>
                 <CheckCheck className="mr-1.5 h-4 w-4" /> Complete handover
               </Button>
             </div>
@@ -171,12 +161,12 @@ function AdoptionModal({ id, open, onOpenChange }: { id: number | null; open: bo
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <StatusBadge status={a.status} label={STATUS_LABEL[a.status]} />
-            {PAYMENTS_ENABLED && a.feeDue > 0 && active && <span className="text-sm font-medium text-destructive">{formatMoney(a.feeDue)} still due — required before handover</span>}
+
           </div>
           <DetailList
             items={[
               { label: "Adopter", value: a.user ? `${fullName(a.user)} · ${a.user.email}` : "—" },
-              { label: "Fee", value: PAYMENTS_ENABLED ? `${feeLabel(a.feeAmount)} · paid ${formatMoney(a.feePaid)}` : feeLabel(a.feeAmount) },
+              { label: "Fee", value: feeLabel(a.feeAmount) },
               { label: a.status === "completed" ? "Handed over" : "Planned handover", value: formatDay(a.adoptionDate) },
               { label: "Follow-up visit", value: a.followUpDate ? formatDay(a.followUpDate) : "Not scheduled" },
               {
@@ -193,18 +183,13 @@ function AdoptionModal({ id, open, onOpenChange }: { id: number | null; open: bo
               ...(a.cancelReason ? [{ label: "Cancellation reason", value: a.cancelReason, full: true }] : []),
             ]}
           />
-          {PAYMENTS_ENABLED && (
-            <section className="space-y-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fee payments</h3>
-              <PaymentLines payments={a.payments} />
-            </section>
-          )}
+
         </div>
       )}
 
       {a && (
         <>
-          <RecordPaymentModal target={{ adoptionId: a.id, reference: a.application.applicationNo }} due={a.feeDue} open={pay.isOpen} onOpenChange={pay.setOpen} />
+
           <FormModal
             open={dates.isOpen}
             onOpenChange={dates.setOpen}
@@ -238,7 +223,7 @@ function AdoptionModal({ id, open, onOpenChange }: { id: number | null; open: bo
             onOpenChange={cancel.setOpen}
             size="sm"
             title="Cancel adoption"
-            description={Number(a.feePaid) > 0 ? "Refund the fee from the Payments page first — the API won't cancel while money is held." : "The pet goes back to “available” on the website."}
+            description="The pet goes back to “available” on the website."
             schema={cancelSchema}
             defaultValues={{ reason: "" }}
             submitText="Cancel adoption"

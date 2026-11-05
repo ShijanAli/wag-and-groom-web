@@ -113,12 +113,12 @@ function BookingsTab({ userId }: { userId: number }) {
   if (q.isPending) return <Skeleton className="h-32 w-full" />;
   const rows = q.data?.data ?? [];
   if (!rows.length) return <EmptyState icon={CalendarDays} title="No bookings yet" className="py-8" />;
-  const spent = rows.filter((b) => b.paymentStatus === "paid").reduce((n, b) => n + Number(b.totalAmount), 0);
+  const spent = rows.filter((b) => b.status === "completed").reduce((n, b) => n + Number(b.totalAmount), 0);
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
         {q.data!.meta.total} booking{q.data!.meta.total === 1 ? "" : "s"}
-        {spent > 0 && ` · ${formatMoney(spent)} paid in the latest ${rows.length}`}
+        {spent > 0 && ` · ${formatMoney(spent)} in completed visits (latest ${rows.length})`}
       </p>
       <ul className="divide-y rounded-xl border">
         {rows.map((b) => (

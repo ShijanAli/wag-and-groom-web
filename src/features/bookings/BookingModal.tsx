@@ -67,7 +67,7 @@ export interface BookingModalProps {
 
 /**
  * The booking wizard: service → pet → date & slot → confirm.
- * Everything comes from the API — live availability and promo validation. Online payment is switched off.
+ * Everything comes from the API — live availability and promo validation. No payment is taken online.
  */
 export function BookingModal({ open, onOpenChange, serviceId }: BookingModalProps) {
   const { user, status } = useAuth();
@@ -89,7 +89,7 @@ function SignInPrompt({ loading }: { loading: boolean }) {
           <CalendarCheck className="h-7 w-7 text-primary" />
         </span>
         <DialogTitle className="font-display text-2xl">Sign in to book</DialogTitle>
-        <DialogDescription>Your bookings, pets and payments live in your account — it takes a minute to create one.</DialogDescription>
+        <DialogDescription>Your bookings and pets live in your account — it takes a minute to create one.</DialogDescription>
       </DialogHeader>
       {loading ? (
         <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />

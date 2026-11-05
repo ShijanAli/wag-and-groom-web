@@ -112,7 +112,7 @@ export interface ApplicationInput {
 
 const appKeys = createKeys("adoption-applications");
 const adoptionKeys = createKeys("adoptions");
-const adoptionInvalidate = [appKeys.all, adoptionKeys.all, adoptionPetHooks.keys.all, ["payments"], ["my-payments"]];
+const adoptionInvalidate = [appKeys.all, adoptionKeys.all, adoptionPetHooks.keys.all];
 
 export const applicationsApi = {
   apply: (body: ApplicationInput) => api.post<AdoptionApplication>("/adoption-applications", body),

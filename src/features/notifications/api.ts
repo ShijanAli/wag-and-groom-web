@@ -60,7 +60,7 @@ export const NOTIFICATIONS_PAGE: Record<Panel, string> = {
   customer: "/dashboard?tab=notifications",
 };
 
-/** Where clicking a notification goes, from its `data` (booking / application / review / adoption / payment). */
+/** Where clicking a notification goes, from its `data` (booking / application / review / adoption). */
 export function notificationHref(n: Pick<Notification, "type" | "data">, panel: Panel): string | null {
   const d = (n.data ?? {}) as Record<string, string | number | undefined>;
   const q = (v: string | number) => encodeURIComponent(String(v));
@@ -69,13 +69,13 @@ export function notificationHref(n: Pick<Notification, "type" | "data">, panel: 
     if (d.applicationNo) return `/admin/adoption-applications?searchTerm=${q(d.applicationNo)}`;
     if (d.reviewId) return "/admin/reviews?status=all";
     if (d.adoptionId) return "/admin/adoptions";
-    if (d.reference || d.transactionId) return `/admin/payments?searchTerm=${q(d.reference ?? d.transactionId!)}`;
+
     return null;
   }
   if (panel === "staff") return d.bookingNo ? "/staff?tab=upcoming" : null;
   if (d.bookingNo) return "/dashboard?tab=bookings&period=all";
   if (d.applicationNo || d.adoptionId) return "/dashboard?tab=adoptions";
   if (d.reviewId) return "/dashboard?tab=reviews";
-  if (n.type.startsWith("payment")) return "/dashboard?tab=payments";
+
   return null;
 }

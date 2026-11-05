@@ -27,14 +27,7 @@ const STATUS_TONE: Record<string, Tone> = {
   completed: "success",
   cancelled: "danger",
   no_show: "danger",
-  // PaymentStatus
-  unpaid: "warning",
-  partial: "info",
-  paid: "success",
-  refunded: "neutral",
-  // TransactionStatus
-  success: "success",
-  failed: "danger",
+
   // ReviewStatus / ApplicationStatus
   approved: "success",
   rejected: "danger",

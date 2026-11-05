@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Banknote, UserCog } from "lucide-react";
+import { UserCog } from "lucide-react";
 import { z } from "zod";
 import { Can } from "@/components/common/Can";
 import { DataTable, DataTableToolbar, TableDateRange, TableFilter } from "@/components/common/data-table";
@@ -18,18 +18,18 @@ import { useDisclosure } from "@/hooks/use-disclosure";
 import { useListParams } from "@/hooks/use-list-params";
 import { fullName } from "@/lib/auth";
 import { formatDateTime, formatMoney, formatTime } from "@/lib/format";
-import { PAYMENTS_ENABLED } from "@/lib/features";
+
 import { PERMISSIONS as P } from "@/lib/permissions";
-import { BOOKING_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, dueAmount, useAdminBookings, useAssignStaff, useBookingDetail } from "@/features/bookings/api";
+import { BOOKING_STATUS_OPTIONS, useAdminBookings, useAssignStaff, useBookingDetail } from "@/features/bookings/api";
 import { BookingBadges, BookingDetail, bookingDay } from "@/features/bookings/components";
 import { StatusActions } from "@/features/bookings/StatusActions";
 import { useServiceOptions } from "@/features/catalog/api";
-import { RecordPaymentModal } from "@/features/payments/PaymentModals";
+
 import { useStaffList, useStaffOptions } from "@/features/staff/api";
 import type { Booking } from "@/types/models";
 
 const assignSchema = z.object({ staffId: z.number({ required_error: "Choose a staff member" }).int().positive("Choose a staff member") });
-const PAYABLE_STATUSES = ["pending", "confirmed", "in_progress", "completed"];
+
 
 export default function AdminBookings() {
   const { can } = useAuth();
@@ -111,7 +111,7 @@ export default function AdminBookings() {
             filters={
               <>
                 <TableFilter list={list} param="status" options={BOOKING_STATUS_OPTIONS} allLabel="All statuses" placeholder="Status" />
-                {PAYMENTS_ENABLED && <TableFilter list={list} param="paymentStatus" options={PAYMENT_STATUS_OPTIONS} allLabel="Any payment" placeholder="Payment" />}
+
                 <TableFilter list={list} param="serviceId" options={services.data ?? []} allLabel="All services" placeholder="Service" />
                 <TableFilter list={list} param="staffId" options={staff.data ?? []} allLabel="All staff" placeholder="Staff" />
                 <TableDateRange list={list} />
@@ -125,17 +125,15 @@ export default function AdminBookings() {
   );
 }
 
-/** Detail modal with the admin actions (status, staff, payment). Loads logs + payments. */
+/** Detail modal with the admin actions (status, staff). Loads the status history. */
 function BookingPanel({ booking, open, onOpenChange }: { booking: Booking | null; open: boolean; onOpenChange: (o: boolean) => void }) {
   const { can } = useAuth();
   const q = useBookingDetail(open ? booking?.id : null);
   const assign = useDisclosure();
-  const pay = useDisclosure();
   const assignStaff = useAssignStaff();
   // only staff who provide this service can be assigned
   const providers = useStaffList({ serviceId: booking?.serviceId, limit: 100 });
   const b = q.data;
-  const due = b ? dueAmount(b) : 0;
 
   return (
     <Modal
@@ -155,13 +153,7 @@ function BookingPanel({ booking, open, onOpenChange }: { booking: Booking | null
                   </Button>
                 )}
               </Can>
-              <Can permission={P.PAYMENT.CREATE}>
-                {PAYMENTS_ENABLED && due > 0 && PAYABLE_STATUSES.includes(b.status) && (
-                  <Button variant="outline" size="sm" onClick={() => pay.open()}>
-                    <Banknote className="mr-1.5 h-4 w-4" /> Record payment
-                  </Button>
-                )}
-              </Can>
+
             </div>
             {can(P.BOOKING.UPDATE_STATUS) && <StatusActions booking={b} />}
           </div>
@@ -190,7 +182,7 @@ function BookingPanel({ booking, open, onOpenChange }: { booking: Booking | null
           options={(providers.data?.data ?? []).map((s) => ({ value: s.id, label: fullName(s), disabled: s.status !== "active" }))}
         />
       </FormModal>
-      <RecordPaymentModal target={b ? { bookingId: b.id, reference: b.bookingNo } : null} due={due} open={pay.isOpen} onOpenChange={pay.setOpen} />
+
     </Modal>
   );
 }
