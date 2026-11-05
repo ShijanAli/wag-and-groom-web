@@ -92,9 +92,9 @@ export default function AdminDashboard() {
           label="Booking value this month"
           icon={Wallet}
           loading={!s}
-          value={s && formatMoney(s.bookingValue.thisMonth)}
-          trend={s?.bookingValue.growthPercent}
-          hint={s && `completed bookings · vs ${formatMoney(s.bookingValue.lastMonth)} last month`}
+          value={s && formatMoney(s.bookingValue?.thisMonth ?? 0)}
+          trend={s?.bookingValue?.growthPercent}
+          hint={s && `completed bookings · vs ${formatMoney(s.bookingValue?.lastMonth ?? 0)} last month`}
           href={can(P.BOOKING.VIEW) ? "/admin/bookings?status=completed" : undefined}
         />
         <StatCard
