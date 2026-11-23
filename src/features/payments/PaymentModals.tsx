@@ -46,7 +46,7 @@ export function RecordPaymentModal({
         return record.mutateAsync({ ...ref, amount, method, note: note || undefined });
       }}
     >
-      <TextField name="amount" label="Amount" type="number" min={0} step="0.01" leading="৳" required />
+      <TextField name="amount" label="Amount" type="number" min={0} step="0.01" leading="$" required />
       <SelectField name="method" label="Method" options={COUNTER_METHODS} />
       <TextareaField name="note" label="Note" rows={2} placeholder="Receipt no., who received it…" />
     </FormModal>
@@ -76,7 +76,7 @@ export function RefundModal({ payment, open, onOpenChange }: { payment: Payment 
       submitText="Refund"
       onSubmit={(v) => refund.mutateAsync({ id: payment!.id, amount: v.amount, reason: v.reason })}
     >
-      <TextField name="amount" label="Amount" type="number" min={0} step="0.01" leading={payment?.currency === "USD" ? "$" : "৳"} required />
+      <TextField name="amount" label="Amount" type="number" min={0} step="0.01" leading={payment?.currency === "USD" ? "$" : "$"} required />
       <TextareaField name="reason" label="Reason" rows={2} placeholder="e.g. Booking cancelled by the shop" />
       {payment?.method === "sslcommerz" && <p className="text-xs text-muted-foreground">Online payments are refunded to the customer's original method through SSLCommerz.</p>}
     </FormModal>

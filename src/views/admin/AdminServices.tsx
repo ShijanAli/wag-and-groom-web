@@ -209,7 +209,7 @@ export default function AdminServices() {
     <>
       <PageHeader
         title="Services"
-        description="Your service catalog — prices are in BDT."
+        description="Your service catalog — prices are in USD ($)."
         actions={
           <Can permission={P.SERVICE.CREATE}>
             <Button onClick={() => editor.open()}>
@@ -264,8 +264,8 @@ export default function AdminServices() {
 
         <FormSection title="Price & time">
           <FieldRow cols={3}>
-            <TextField name="price" label="Price" type="number" min={0} step="0.01" leading="৳" required />
-            <TextField name="discountPrice" label="Sale price" type="number" min={0} step="0.01" leading="৳" description="Optional" />
+            <TextField name="price" label="Price" type="number" min={0} step="0.01" leading="$" required />
+            <TextField name="discountPrice" label="Sale price" type="number" min={0} step="0.01" leading="$" description="Optional" />
             <TextField name="durationMinutes" label="Duration (min)" type="number" min={5} max={720} step={5} required />
           </FieldRow>
         </FormSection>

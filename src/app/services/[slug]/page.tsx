@@ -56,7 +56,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
         category: service.category.name,
         ...(service.image && { image: service.image }),
         provider: { "@type": "LocalBusiness", "@id": `${SITE.url}/#business`, name: SITE.name },
-        offers: { "@type": "Offer", price: Number(service.discountPrice ?? service.price), priceCurrency: "BDT", availability: "https://schema.org/InStock" },
+        offers: { "@type": "Offer", price: Number(service.discountPrice ?? service.price), priceCurrency: "USD", availability: "https://schema.org/InStock" },
         ...(summary?.totalReviews && {
           aggregateRating: { "@type": "AggregateRating", ratingValue: summary.averageRating, reviewCount: summary.totalReviews, bestRating: 5, worstRating: 1 },
           review: (topReviews ?? []).map((r) => ({

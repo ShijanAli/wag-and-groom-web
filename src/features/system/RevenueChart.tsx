@@ -14,7 +14,7 @@ const SERIES = [
   { key: "adoptions", label: "Adoption fees", color: "var(--viz-2)" },
 ] as const;
 
-const compact = new Intl.NumberFormat("en-IN", { notation: "compact", maximumFractionDigits: 1 });
+const compact = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
 const periodLabel = (p: string, groupBy: RevenueReport["groupBy"], long = false) =>
   groupBy === "month" ? format(parseISO(`${p}-01`.slice(0, 10)), long ? "MMMM yyyy" : "MMM yy") : format(parseISO(p), long ? "EEE, d MMM yyyy" : "d MMM");
 
@@ -114,7 +114,7 @@ export function RevenueChart({ report }: { report: RevenueReport }) {
                 tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
               />
               <YAxis
-                tickFormatter={(v) => `৳${compact.format(v)}`}
+                tickFormatter={(v) => `$${compact.format(v)}`}
                 tickLine={false}
                 axisLine={false}
                 width={52}

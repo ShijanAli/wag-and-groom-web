@@ -254,7 +254,7 @@ export default function AdminAdoptionPets() {
         </FormSection>
         <FormSection title="Listing">
           <FieldRow>
-            <TextField name="adoptionFee" label="Adoption fee" type="number" min={0} leading="৳" description="0 = free adoption" />
+            <TextField name="adoptionFee" label="Adoption fee" type="number" min={0} leading="$" description="0 = free adoption" />
             <SwitchField name="isFeatured" label="Featured" description="Shown first on the website." className="self-end" />
           </FieldRow>
           {!editor.item && <MultiImageUploadField name="images" label="Photos" folder="adoption-pets" description="The first photo is the cover. Up to 10." />}

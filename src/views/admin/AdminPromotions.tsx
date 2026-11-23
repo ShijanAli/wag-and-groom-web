@@ -316,9 +316,9 @@ function DiscountFields() {
   const pct = type === "percentage";
   return (
     <FieldRow cols={3}>
-      <TextField name="discountValue" label={pct ? "Percent off" : "Amount off"} type="number" min={0} max={pct ? 100 : undefined} step="0.01" leading={pct ? "%" : "৳"} required />
-      {pct && <TextField name="maxDiscountAmount" label="Max discount" type="number" min={0} leading="৳" description="Optional cap" />}
-      <TextField name="minOrderAmount" label="Min. order" type="number" min={0} leading="৳" description="Optional" />
+      <TextField name="discountValue" label={pct ? "Percent off" : "Amount off"} type="number" min={0} max={pct ? 100 : undefined} step="0.01" leading={pct ? "%" : "$"} required />
+      {pct && <TextField name="maxDiscountAmount" label="Max discount" type="number" min={0} leading="$" description="Optional cap" />}
+      <TextField name="minOrderAmount" label="Min. order" type="number" min={0} leading="$" description="Optional" />
     </FieldRow>
   );
 }

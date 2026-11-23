@@ -89,7 +89,7 @@ export default function AdminPayments() {
 
   return (
     <>
-      <PageHeader title="Payments" description="Online and counter payments, and refunds. Amounts in BDT unless marked." />
+      <PageHeader title="Payments" description="Online and counter payments, and refunds. Amounts in USD ($)." />
       <DataTable
         columns={columns}
         query={query}

@@ -7,7 +7,7 @@ import { SITE } from "@/lib/site";
 
 const title = "Pet Grooming, Walking, Sitting & Spa Services and Prices";
 const description =
-  "Explore PetPlex pet grooming, walking, sitting, daycare and spa services with clear prices in BDT. Certified handlers, pet-safe products, free cancellation. Book online in a minute.";
+  "Explore PetPlex pet grooming, walking, sitting, daycare and spa services with clear prices in USD. Certified handlers, pet-safe products, free cancellation. Book online in a minute.";
 const ogImage = "/images/service-grooming.jpg";
 
 export const metadata: Metadata = {
@@ -64,7 +64,7 @@ const buildJsonLd = (services: Service[], faqs: Faq[]) => ({
           ...(s.image && { image: s.image }),
           category: s.category.name,
           provider: { "@type": "LocalBusiness", "@id": `${SITE.url}/#business`, name: SITE.name },
-          offers: { "@type": "Offer", price: Number(s.discountPrice ?? s.price), priceCurrency: "BDT" },
+          offers: { "@type": "Offer", price: Number(s.discountPrice ?? s.price), priceCurrency: "USD" },
           ...(s.reviewsCount > 0 && { aggregateRating: { "@type": "AggregateRating", ratingValue: s.avgRating, reviewCount: s.reviewsCount } }),
         },
       })),

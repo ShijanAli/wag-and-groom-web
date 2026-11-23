@@ -221,8 +221,8 @@ export const AGE_FILTERS = [
 
 export const FEE_FILTERS = [
   { value: "0", label: "Free" },
-  { value: "2000", label: "Up to ৳2,000" },
-  { value: "5000", label: "Up to ৳5,000" },
+  { value: "2000", label: "Up to $2,000" },
+  { value: "5000", label: "Up to $5,000" },
 ];
 
 export const coverOf = (p: { primaryImage?: string | null; images?: { imageUrl: string }[] }) => p.primaryImage ?? p.images?.[0]?.imageUrl ?? null;

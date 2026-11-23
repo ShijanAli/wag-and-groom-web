@@ -8,9 +8,9 @@ import { format, formatDistanceToNowStrict, isValid, parse, parseISO } from "dat
 export type Currency = "BDT" | "USD";
 
 const moneyFormatters = new Map<string, Intl.NumberFormat>();
-const CURRENCY_SYMBOL: Record<Currency, string> = { BDT: "৳", USD: "$" };
+const CURRENCY_SYMBOL: Record<Currency, string> = { BDT: "$", USD: "$" };
 
-/** "1500" → "৳1,500" · "150000.5" → "৳1,50,000.50" (BDT uses lakh grouping) · USD → "$1,500" */
+/** "1500" → "$1,500" · "150000.5" → "$150,000.50" (the whole system displays dollars) */
 export function formatMoney(value: string | number | null | undefined, currency: Currency = "BDT"): string {
   if (value === null || value === undefined || value === "") return "—";
   const n = typeof value === "number" ? value : Number(value);
@@ -18,7 +18,7 @@ export function formatMoney(value: string | number | null | undefined, currency:
   const key = `${currency}:${n % 1 === 0}`;
   let f = moneyFormatters.get(key);
   if (!f) {
-    f = new Intl.NumberFormat(currency === "BDT" ? "en-IN" : "en-US", {
+    f = new Intl.NumberFormat("en-US", {
       minimumFractionDigits: n % 1 === 0 ? 0 : 2,
       maximumFractionDigits: 2,
     });

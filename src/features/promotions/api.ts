@@ -51,7 +51,7 @@ export function promotionPhase(p: Pick<Promotion, "startsAt" | "endsAt" | "statu
 
 export const DISCOUNT_TYPE_OPTIONS = [
   { label: "Percentage", value: "percentage", hint: "e.g. 10% off" },
-  { label: "Fixed amount", value: "fixed", hint: "e.g. ৳200 off" },
+  { label: "Fixed amount", value: "fixed", hint: "e.g. $200 off" },
 ];
 
 export const SCOPE_OPTIONS = [
@@ -60,7 +60,7 @@ export const SCOPE_OPTIONS = [
   { label: "Specific categories", value: "specific_categories" },
 ];
 
-/** "10% off · max ৳300" / "৳200 off" */
+/** "10% off · max $300" / "$200 off" */
 export function discountLabel(p: Pick<Promotion, "discountType" | "discountValue" | "maxDiscountAmount">) {
   return p.discountType === "percentage"
     ? `${Number(p.discountValue)}% off${p.maxDiscountAmount ? ` · max ${formatMoney(p.maxDiscountAmount)}` : ""}`
